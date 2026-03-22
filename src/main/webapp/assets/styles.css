@@ -1,0 +1,153 @@
+:root {
+    --bg: #f7f4ed;
+    --card: #fffef8;
+    --accent: #1e6f5c;
+    --accent-2: #f0a500;
+    --text: #2a2a2a;
+    --danger: #b02a37;
+    --success: #166534;
+    --border: #d9d3c5;
+    --shadow: 0 8px 22px rgba(42, 42, 42, 0.08);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Source Sans 3", "Segoe UI", sans-serif;
+    color: var(--text);
+    background:
+            radial-gradient(circle at 10% 10%, rgba(30, 111, 92, 0.12), transparent 35%),
+            radial-gradient(circle at 90% 20%, rgba(240, 165, 0, 0.12), transparent 32%),
+            var(--bg);
+}
+
+.app-shell {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.top-bar {
+    background: linear-gradient(120deg, var(--accent), #2a9d8f);
+    color: white;
+    padding: 1.2rem;
+    border-radius: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.top-bar h1 {
+    margin: 0;
+}
+
+.nav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.6rem;
+    margin: 1rem 0;
+}
+
+.nav-grid a {
+    text-decoration: none;
+    text-align: center;
+    color: var(--text);
+    padding: 0.65rem;
+    border-radius: 0.6rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.9rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.8rem;
+}
+
+h2 {
+    margin-top: 0;
+}
+
+label {
+    display: block;
+    margin: 0.55rem 0 0.25rem;
+    font-weight: 600;
+}
+
+input,
+button {
+    font: inherit;
+    border-radius: 0.45rem;
+    border: 1px solid var(--border);
+    padding: 0.55rem;
+}
+
+button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: 0.92;
+}
+
+button.danger {
+    background: var(--danger);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem;
+}
+
+.inline {
+    display: inline-flex;
+    gap: 0.35rem;
+    margin-right: 0.45rem;
+    align-items: center;
+}
+
+.error {
+    color: var(--danger);
+    font-weight: 700;
+}
+
+.success {
+    color: var(--success);
+    font-weight: 700;
+    background: #ecfdf3;
+    border: 1px solid #86efac;
+    padding: 0.75rem;
+    border-radius: 0.55rem;
+}
+
+@media (max-width: 760px) {
+    .inline {
+        display: flex;
+        margin-bottom: 0.4rem;
+    }
+
+    th,
+    td {
+        font-size: 0.9rem;
+    }
+}
