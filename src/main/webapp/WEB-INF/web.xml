@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+         version="6.0">
+
+    <display-name>Smart Kitchen Inventory</display-name>
+
+    <listener>
+        <listener-class>app.web.AppContextListener</listener-class>
+    </listener>
+
+    <servlet>
+        <servlet-name>dashboardServlet</servlet-name>
+        <servlet-class>app.web.DashboardServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>dashboardServlet</servlet-name>
+        <url-pattern>/dashboard</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>inventoryServlet</servlet-name>
+        <servlet-class>app.web.InventoryServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>inventoryServlet</servlet-name>
+        <url-pattern>/inventory</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>expiryServlet</servlet-name>
+        <servlet-class>app.web.ExpiryServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>expiryServlet</servlet-name>
+        <url-pattern>/expiry-alerts</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>recommendationServlet</servlet-name>
+        <servlet-class>app.web.DishRecommendationServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>recommendationServlet</servlet-name>
+        <url-pattern>/recommendations</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>shoppingListServlet</servlet-name>
+        <servlet-class>app.web.ShoppingListServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>shoppingListServlet</servlet-name>
+        <url-pattern>/shopping-list</url-pattern>
+    </servlet-mapping>
+
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+</web-app>

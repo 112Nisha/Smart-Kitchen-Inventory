@@ -1,0 +1,23 @@
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Kitchen Inventory</title>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/styles.css">
+</head>
+<body>
+<div class="app-shell">
+    <header class="top-bar">
+        <h1>Smart Kitchen Inventory</h1>
+        <p>Tenant: <strong>${tenant}</strong></p>
+    </header>
+    <nav class="nav-grid">
+        <a href="${pageContext.request.contextPath}/dashboard?tenant=${tenant}">Dashboard</a>
+        <a href="${pageContext.request.contextPath}/inventory?tenant=${tenant}">Inventory</a>
+        <a href="${pageContext.request.contextPath}/expiry-alerts?tenant=${tenant}">Expiry Alerts</a>
+        <a href="${pageContext.request.contextPath}/recommendations?tenant=${tenant}">Dish Suggestions</a>
+        <a href="${pageContext.request.contextPath}/shopping-list?tenant=${tenant}">Shopping List</a>
+    </nav>
+    <main>
