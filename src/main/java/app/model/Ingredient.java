@@ -1,14 +1,6 @@
 package app.model;
 
-import app.alerts.*;
-import app.model.*;
-import app.notification.*;
-import app.repository.*;
-import app.service.*;
 import app.state.*;
-import app.web.*;
-
-
 
 import java.time.LocalDate;
 import java.util.Objects;
@@ -40,6 +32,47 @@ public class Ingredient {
         this.lowStockThreshold = lowStockThreshold;
         this.discarded = false;
         this.state = new FreshState();
+    }
+
+    private Ingredient(String id,
+                       String tenantId,
+                       String name,
+                       double quantity,
+                       String unit,
+                       LocalDate expiryDate,
+                       double lowStockThreshold,
+                       boolean discarded,
+                       IngredientState state) {
+        this.id = id;
+        this.tenantId = tenantId;
+        this.name = name;
+        this.quantity = quantity;
+        this.unit = unit;
+        this.expiryDate = expiryDate;
+        this.lowStockThreshold = lowStockThreshold;
+        this.discarded = discarded;
+        this.state = state;
+    }
+
+    public Ingredient copy() {
+        IngredientState copiedState = discarded ? new DiscardedState() : switch (state.getLifecycle()) {
+            case FRESH -> new FreshState();
+            case NEAR_EXPIRY -> new NearExpiryState();
+            case EXPIRED -> new ExpiredState();
+            case DISCARDED -> new DiscardedState();
+        };
+
+        return new Ingredient(
+                id,
+                tenantId,
+                name,
+                quantity,
+                unit,
+                expiryDate,
+                lowStockThreshold,
+                discarded,
+                copiedState
+        );
     }
 
     public void refreshState(LocalDate today, int nearExpiryDays) {

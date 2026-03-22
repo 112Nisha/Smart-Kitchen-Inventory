@@ -57,6 +57,11 @@ public class AppContextListener implements ServletContextListener {
         context.setAttribute(APP_SERVICES_KEY, appServices);
     }
 
+    @Override
+    public void contextDestroyed(ServletContextEvent sce) {
+        InventoryManager.resetInstanceForTests();
+    }
+
     private void seedData(InventoryManager inventoryManager) {
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Tomato", 12, "kg", LocalDate.now().plusDays(2), 5));
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Onion", 4, "kg", LocalDate.now().plusDays(8), 6));

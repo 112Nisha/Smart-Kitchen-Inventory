@@ -27,17 +27,25 @@ public final class InventoryManager {
     }
 
     public static InventoryManager getInstance(IngredientRepository ingredientRepository, int nearExpiryDays) {
+        Objects.requireNonNull(ingredientRepository, "ingredientRepository is required");
+        if (nearExpiryDays < 0) {
+            throw new IllegalArgumentException("nearExpiryDays must be >= 0");
+        }
+
         if (instance == null) {
             synchronized (InventoryManager.class) {
                 if (instance == null) {
                     instance = new InventoryManager(ingredientRepository, nearExpiryDays);
                 }
             }
+        } else if (instance.ingredientRepository != ingredientRepository || instance.nearExpiryDays != nearExpiryDays) {
+            throw new IllegalStateException("InventoryManager is already initialized with different configuration");
         }
         return instance;
     }
 
     public Ingredient addIngredient(Ingredient ingredient) {
+        validateTenantId(Objects.requireNonNull(ingredient, "ingredient is required").getTenantId());
         validateIngredient(ingredient);
         Ingredient saved = ingredientRepository.save(ingredient);
         invalidateTenantCache(ingredient.getTenantId());
@@ -51,7 +59,12 @@ public final class InventoryManager {
                                                  String unit,
                                                  LocalDate expiryDate,
                                                  double lowStockThreshold) {
+        validateTenantId(tenantId);
+        validateIngredientId(ingredientId);
         validateIngredientFields(name, quantity, lowStockThreshold);
+        validateUnit(unit);
+        Objects.requireNonNull(expiryDate, "expiryDate is required");
+
         Optional<Ingredient> existing = ingredientRepository.findById(tenantId, ingredientId);
         existing.ifPresent(item -> {
             item.setName(name);
@@ -67,7 +80,9 @@ public final class InventoryManager {
     }
 
     public Optional<Ingredient> useIngredient(String tenantId, String ingredientId, double usedQuantity) {
-        if (usedQuantity <= 0) {
+        validateTenantId(tenantId);
+        validateIngredientId(ingredientId);
+        if (!Double.isFinite(usedQuantity) || usedQuantity <= 0) {
             throw new IllegalArgumentException("Used quantity must be > 0");
         }
 
@@ -83,6 +98,9 @@ public final class InventoryManager {
     }
 
     public Optional<Ingredient> discardIngredient(String tenantId, String ingredientId) {
+        validateTenantId(tenantId);
+        validateIngredientId(ingredientId);
+
         Optional<Ingredient> existing = ingredientRepository.findById(tenantId, ingredientId);
         existing.ifPresent(item -> {
             item.setDiscarded(true);
@@ -94,12 +112,15 @@ public final class InventoryManager {
     }
 
     public List<Ingredient> listIngredients(String tenantId) {
+        validateTenantId(tenantId);
         List<Ingredient> items = tenantCache.computeIfAbsent(tenantId, key -> ingredientRepository.findByTenant(tenantId));
         items.forEach(item -> item.refreshState(LocalDate.now(), nearExpiryDays));
         return List.copyOf(items);
     }
 
     public Optional<Ingredient> findById(String tenantId, String ingredientId) {
+        validateTenantId(tenantId);
+        validateIngredientId(ingredientId);
         Optional<Ingredient> found = ingredientRepository.findById(tenantId, ingredientId);
         found.ifPresent(item -> item.refreshState(LocalDate.now(), nearExpiryDays));
         return found;
@@ -107,21 +128,41 @@ public final class InventoryManager {
 
     private void validateIngredient(Ingredient ingredient) {
         validateIngredientFields(
-                Objects.requireNonNull(ingredient, "ingredient is required").getName(),
+                ingredient.getName(),
                 ingredient.getQuantity(),
                 ingredient.getLowStockThreshold()
         );
+        validateUnit(ingredient.getUnit());
+        Objects.requireNonNull(ingredient.getExpiryDate(), "expiryDate is required");
     }
 
     private void validateIngredientFields(String name, double quantity, double lowStockThreshold) {
         if (Objects.requireNonNull(name, "name is required").isBlank()) {
             throw new IllegalArgumentException("Ingredient name must not be blank");
         }
-        if (quantity < 0) {
+        if (!Double.isFinite(quantity) || quantity < 0) {
             throw new IllegalArgumentException("Quantity must be >= 0");
         }
-        if (lowStockThreshold < 0) {
+        if (!Double.isFinite(lowStockThreshold) || lowStockThreshold < 0) {
             throw new IllegalArgumentException("Low stock threshold must be >= 0");
+        }
+    }
+
+    private void validateTenantId(String tenantId) {
+        if (Objects.requireNonNull(tenantId, "tenantId is required").isBlank()) {
+            throw new IllegalArgumentException("tenantId must not be blank");
+        }
+    }
+
+    private void validateIngredientId(String ingredientId) {
+        if (Objects.requireNonNull(ingredientId, "ingredientId is required").isBlank()) {
+            throw new IllegalArgumentException("ingredientId must not be blank");
+        }
+    }
+
+    private void validateUnit(String unit) {
+        if (Objects.requireNonNull(unit, "unit is required").isBlank()) {
+            throw new IllegalArgumentException("Unit must not be blank");
         }
     }
 
