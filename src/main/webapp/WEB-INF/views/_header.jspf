@@ -11,7 +11,7 @@
 <div class="app-shell">
     <header class="top-bar">
         <h1>Smart Kitchen Inventory</h1>
-        <p>Tenant: <strong>${tenant}</strong></p>
+        <p>Tenant: <strong><c:out value="${tenant}"/></strong></p>
     </header>
     <nav class="nav-grid">
         <a href="${pageContext.request.contextPath}/dashboard?tenant=${tenant}">Dashboard</a>
