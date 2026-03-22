@@ -37,15 +37,21 @@ public class InventoryServlet extends BaseServlet {
                 );
                 services().inventoryManager().addIngredient(ingredient);
             } else if ("use".equals(action)) {
-                services().inventoryManager().useIngredient(
+                boolean found = services().inventoryManager().useIngredient(
                         tenantId,
                         req.getParameter("id"),
                         Double.parseDouble(req.getParameter("usedQuantity"))
-                );
+                ).isPresent();
+                if (!found) {
+                    throw new IllegalArgumentException("Ingredient not found for use action");
+                }
             } else if ("discard".equals(action)) {
-                services().inventoryManager().discardIngredient(tenantId, req.getParameter("id"));
+                boolean found = services().inventoryManager().discardIngredient(tenantId, req.getParameter("id")).isPresent();
+                if (!found) {
+                    throw new IllegalArgumentException("Ingredient not found for discard action");
+                }
             } else if ("update".equals(action)) {
-                services().inventoryManager().updateIngredient(
+                boolean found = services().inventoryManager().updateIngredient(
                         tenantId,
                         req.getParameter("id"),
                         req.getParameter("name"),
@@ -53,7 +59,12 @@ public class InventoryServlet extends BaseServlet {
                         req.getParameter("unit"),
                         LocalDate.parse(req.getParameter("expiryDate")),
                         Double.parseDouble(req.getParameter("lowStockThreshold"))
-                );
+                ).isPresent();
+                if (!found) {
+                    throw new IllegalArgumentException("Ingredient not found for update action");
+                }
+            } else {
+                throw new IllegalArgumentException("Unsupported action: " + (action == null ? "<null>" : action));
             }
         } catch (RuntimeException ex) {
             String errorMessage = ex.getMessage() == null ? "Request failed" : ex.getMessage();

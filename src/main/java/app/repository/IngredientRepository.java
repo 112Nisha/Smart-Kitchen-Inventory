@@ -1,14 +1,6 @@
 package app.repository;
 
-import app.alerts.*;
-import app.model.*;
-import app.notification.*;
-import app.repository.*;
-import app.service.*;
-import app.state.*;
-import app.web.*;
-
-
+import app.model.Ingredient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,16 +12,20 @@ public class IngredientRepository {
     private final Map<String, Map<String, Ingredient>> byTenant = new ConcurrentHashMap<>();
 
     public Ingredient save(Ingredient ingredient) {
+        Ingredient copy = ingredient.copy();
         byTenant.computeIfAbsent(ingredient.getTenantId(), key -> new ConcurrentHashMap<>())
-                .put(ingredient.getId(), ingredient);
-        return ingredient;
+                .put(ingredient.getId(), copy);
+        return copy.copy();
     }
 
     public Optional<Ingredient> findById(String tenantId, String ingredientId) {
-        return Optional.ofNullable(byTenant.getOrDefault(tenantId, Map.of()).get(ingredientId));
+        Ingredient found = byTenant.getOrDefault(tenantId, Map.of()).get(ingredientId);
+        return Optional.ofNullable(found).map(Ingredient::copy);
     }
 
     public List<Ingredient> findByTenant(String tenantId) {
-        return new ArrayList<>(byTenant.getOrDefault(tenantId, Map.of()).values());
+        return byTenant.getOrDefault(tenantId, Map.of()).values().stream()
+                .map(Ingredient::copy)
+                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
     }
 }
