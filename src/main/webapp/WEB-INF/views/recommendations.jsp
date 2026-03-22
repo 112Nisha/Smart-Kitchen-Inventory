@@ -2,7 +2,7 @@
 <%@ include file="_header.jspf" %>
 
 <c:if test="${not empty param.impact}">
-    <p class="success">${param.impact}</p>
+    <p class="success"><c:out value="${param.impact}"/></p>
 </c:if>
 
 <section class="card">

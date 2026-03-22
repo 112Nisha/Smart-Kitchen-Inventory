@@ -1,14 +1,6 @@
 package app.notification;
 
-import app.alerts.*;
-import app.model.*;
-import app.notification.*;
-import app.repository.*;
-import app.service.*;
-import app.state.*;
-import app.web.*;
-
-
+import app.model.NotificationMessage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +10,9 @@ public class NotificationService {
     private final int maxRetries;
 
     public NotificationService(int maxRetries) {
+        if (maxRetries < 1) {
+            throw new IllegalArgumentException("maxRetries must be >= 1");
+        }
         this.maxRetries = maxRetries;
     }
 

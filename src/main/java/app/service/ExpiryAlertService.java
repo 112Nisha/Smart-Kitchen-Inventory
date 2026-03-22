@@ -1,14 +1,9 @@
 package app.service;
 
-import app.alerts.*;
-import app.model.*;
-import app.notification.*;
-import app.repository.*;
-import app.service.*;
-import app.state.*;
-import app.web.*;
-
-
+import app.alerts.AlertEventBus;
+import app.alerts.AlertHandler;
+import app.alerts.ExpiryAlertContext;
+import app.model.Ingredient;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -35,8 +30,12 @@ public class ExpiryAlertService {
             }
             long days = ChronoUnit.DAYS.between(LocalDate.now(), ingredient.getExpiryDate());
             ExpiryAlertContext context = new ExpiryAlertContext(ingredient, days);
-            alertChain.handle(context);
-            eventBus.publish(context);
+            try {
+                alertChain.handle(context);
+                eventBus.publish(context);
+            } catch (RuntimeException ex) {
+                context.addEvent("Alert processing failed: " + ex.getMessage());
+            }
             contexts.add(context);
         }
         return contexts;

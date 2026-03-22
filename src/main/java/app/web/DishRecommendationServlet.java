@@ -1,21 +1,12 @@
 package app.web;
 
-import app.alerts.*;
-import app.model.*;
-import app.notification.*;
-import app.repository.*;
-import app.service.*;
-import app.state.*;
-import app.web.*;
-
-
+import app.model.DishRecipe;
+import app.service.WasteImpactService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class DishRecommendationServlet extends BaseServlet {
@@ -31,7 +22,7 @@ public class DishRecommendationServlet extends BaseServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String tenantId = tenantOrDefault(req.getParameter("tenant"));
-        String dish = req.getParameter("dishName");
+        String dish = req.getParameter("dishName") == null ? "" : req.getParameter("dishName").trim();
 
         double savedQty = services().dishRecommendationService().estimatedSavedIngredientQuantity(tenantId, dish);
         WasteImpactService.Impact impact = services().wasteImpactService().estimateImpact(savedQty);
@@ -42,7 +33,9 @@ public class DishRecommendationServlet extends BaseServlet {
                 impact.methaneAvoidedKg(),
                 impact.co2EquivalentKg()
         );
-        String encodedMessage = URLEncoder.encode(message, StandardCharsets.UTF_8);
-        resp.sendRedirect(req.getContextPath() + "/recommendations?tenant=" + tenantId + "&impact=" + encodedMessage);
+        String encodedMessage = encodeQueryParam(message);
+        resp.sendRedirect(req.getContextPath()
+                + "/recommendations?tenant=" + encodeQueryParam(tenantId)
+                + "&impact=" + encodedMessage);
     }
 }

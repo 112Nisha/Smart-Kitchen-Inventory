@@ -1,13 +1,6 @@
 package app.web;
 
-import app.alerts.*;
-import app.model.*;
-import app.notification.*;
-import app.repository.*;
-import app.service.*;
-import app.state.*;
-import app.web.*;
-
+import app.model.Ingredient;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -63,10 +56,13 @@ public class InventoryServlet extends BaseServlet {
                 );
             }
         } catch (RuntimeException ex) {
-            resp.sendRedirect(req.getContextPath() + "/inventory?tenant=" + tenantId + "&error=" + ex.getMessage());
+            String errorMessage = ex.getMessage() == null ? "Request failed" : ex.getMessage();
+            resp.sendRedirect(req.getContextPath()
+                    + "/inventory?tenant=" + encodeQueryParam(tenantId)
+                    + "&error=" + encodeQueryParam(errorMessage));
             return;
         }
 
-        resp.sendRedirect(req.getContextPath() + "/inventory?tenant=" + tenantId);
+        resp.sendRedirect(req.getContextPath() + "/inventory?tenant=" + encodeQueryParam(tenantId));
     }
 }

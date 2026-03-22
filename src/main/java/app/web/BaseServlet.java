@@ -1,22 +1,28 @@
 package app.web;
 
-import app.alerts.*;
-import app.model.*;
-import app.notification.*;
-import app.repository.*;
-import app.service.*;
-import app.state.*;
-import app.web.*;
-
-
 import jakarta.servlet.http.HttpServlet;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+
 public abstract class BaseServlet extends HttpServlet {
+    private static final String DEFAULT_TENANT = "restaurant-a";
+
     protected AppServices services() {
         return (AppServices) getServletContext().getAttribute(AppContextListener.APP_SERVICES_KEY);
     }
 
     protected String tenantOrDefault(String tenantIdParam) {
-        return (tenantIdParam == null || tenantIdParam.isBlank()) ? "restaurant-a" : tenantIdParam.trim();
+        if (tenantIdParam == null || tenantIdParam.isBlank()) {
+            return DEFAULT_TENANT;
+        }
+
+        String normalized = tenantIdParam.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_-]", "");
+        return normalized.isBlank() ? DEFAULT_TENANT : normalized;
+    }
+
+    protected String encodeQueryParam(String value) {
+        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 }
