@@ -1,30 +1,22 @@
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
 <%@ include file="_header.jspf" %>
 
-<c:if test="${not empty impactMessage}">
-    <p class="success"><c:out value="${impactMessage}"/></p>
-</c:if>
-
 <c:if test="${not empty successMessage}">
     <p class="success"><c:out value="${successMessage}"/></p>
 </c:if>
 
 <section class="card">
-    <h2>Suggested Dishes for Near-Expiry Ingredients</h2>
+    <h2>Manage Recipes</h2>
 
-    <p style="margin-bottom: 16px;">
-        <a href="${pageContext.request.contextPath}/recipes/add?tenantId=${tenantId}">
-            <button type="button">Add New Recipe</button>
-        </a>
-
-        <a href="${pageContext.request.contextPath}/recipes/manage?tenantId=${tenantId}" style="margin-left: 10px;">
-            <button type="button">Manage / Delete Recipes</button>
+    <p>
+        <a href="${pageContext.request.contextPath}/recommendations?tenantId=${tenantId}">
+            <button type="button">Back to Recommendations</button>
         </a>
     </p>
 
     <c:choose>
-        <c:when test="${empty recommendations}">
-            <p>No suggestions currently. You may not have enough usable ingredients right now.</p>
+        <c:when test="${empty allRecipes}">
+            <p>No recipes available.</p>
         </c:when>
 
         <c:otherwise>
@@ -34,11 +26,11 @@
                     <th>Dish</th>
                     <th>Ingredients</th>
                     <th>Instructions</th>
-                    <th>Action</th>
+                    <th>Delete</th>
                 </tr>
                 </thead>
                 <tbody>
-                <c:forEach var="dish" items="${recommendations}">
+                <c:forEach var="dish" items="${allRecipes}">
                     <tr>
                         <td>${dish.name}</td>
 
@@ -62,10 +54,11 @@
                         </td>
 
                         <td>
-                            <form method="post" action="${pageContext.request.contextPath}/recommendations">
+                            <form method="post" action="${pageContext.request.contextPath}/recipes/manage"
+                                  onsubmit="return confirm('Delete this recipe?');">
                                 <input type="hidden" name="tenant" value="${tenant}">
-                                <input type="hidden" name="dishName" value="${dish.name}">
-                                <button type="submit">Log as Cooked</button>
+                                <input type="hidden" name="recipeId" value="${dish.id}">
+                                <button type="submit">Delete</button>
                             </form>
                         </td>
                     </tr>

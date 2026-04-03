@@ -12,9 +12,11 @@ import app.web.*;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.annotation.WebListener;
 
 import java.time.LocalDate;
 
+@WebListener
 public class AppContextListener implements ServletContextListener {
     public static final String APP_SERVICES_KEY = "appServices";
 
@@ -66,7 +68,11 @@ public class AppContextListener implements ServletContextListener {
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Tomato", 12, "kg", LocalDate.now().plusDays(2), 5));
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Onion", 4, "kg", LocalDate.now().plusDays(8), 6));
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Basil", 1.5, "kg", LocalDate.now().plusDays(1), 1));
-        inventoryManager.addIngredient(new Ingredient("restaurant-a", "Potato", 25, "kg", LocalDate.now().plusDays(5), 7));
+        inventoryManager.addIngredient(new Ingredient("restaurant-a", "Olive Oil", 12, "liters", LocalDate.now().plusDays(2), 5));
+        inventoryManager.addIngredient(new Ingredient("restaurant-a", "Garlic", 4, "kg", LocalDate.now().plusDays(8), 6));
+        inventoryManager.addIngredient(new Ingredient("restaurant-a", "Pasta", 25, "kg", LocalDate.now().plusDays(5), 7));
+        inventoryManager.addIngredient(new Ingredient("restaurant-a", "Cream", 1.5, "liters", LocalDate.now().plusDays(1), 1));
+        inventoryManager.addIngredient(new Ingredient("restaurant-a", "Soy Sauce", 25, "liters", LocalDate.now().plusDays(5), 7));
 
         inventoryManager.addIngredient(new Ingredient("restaurant-b", "Spinach", 3, "kg", LocalDate.now().plusDays(2), 4));
         inventoryManager.addIngredient(new Ingredient("restaurant-b", "Egg", 50, "units", LocalDate.now().plusDays(6), 15));

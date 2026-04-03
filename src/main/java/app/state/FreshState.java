@@ -18,7 +18,7 @@ public class FreshState implements IngredientState {
 
     @Override
     public boolean canRecommendInDish() {
-        return false;
+        return true;
     }
 
     @Override
