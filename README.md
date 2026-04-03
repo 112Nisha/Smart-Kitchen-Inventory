@@ -36,7 +36,7 @@ Deploy `target/smart-kitchen-inventory.war` to Tomcat and open:
 - Rename the folder to tomcat for convenience
 - cd into tomcat/bin and run ./startup.sh to start the app
 - cd into tomcat/bin and run ./shutdown.sh to close the app
-- To run the entire app, run the following commands from any directory (replace /path-to-tomcat according to your system):
+- To run the entire app, run the following commands from any directory (replace /path-to-tomcat according to your system and this assumes that Smart-Kitchen-Inventory is in your Home directory, you may have to change that path too if the directory is present somewhere else):
 ```bash
 cd ~/Smart-Kitchen-Inventory
 mvn clean package
