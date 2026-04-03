@@ -31,6 +31,30 @@ mvn clean package
 Deploy `target/smart-kitchen-inventory.war` to Tomcat and open:
 `http://localhost:8080/smart-kitchen-inventory`
 
+### How to Install and Use Tomcat
+- Install Tomcat from `tomcat.apache.org`
+- Rename the folder to tomcat for convenience
+- cd into tomcat/bin and run ./startup.sh to start the app
+- cd into tomcat/bin and run ./shutdown.sh to close the app
+- To run the entire app, run the following commands from any directory (replace /path-to-tomcat according to your system):
+```bash
+cd ~/Smart-Kitchen-Inventory
+mvn clean package
+
+cd /path-to-tomcat/bin
+./shutdown.sh
+
+rm -rf /path-to-tomcat/webapps/smart-kitchen-inventory
+rm -rf /path-to-tomcat/webapps/Smart-Kitchen-Inventory
+rm -f /path-to-tomcat/webapps/smart-kitchen-inventory.war
+rm -rf /path-to-tomcat/work/Catalina/localhost/smart-kitchen-inventory
+
+cp ~/Smart-Kitchen-Inventory/target/smart-kitchen-inventory.war /path-to-tomcat/webapps/
+
+./startup.sh
+```
+- After running this, you can open `http://localhost:8080/smart-kitchen-inventory` and once you finish using the app, cd into tomcat/bin and run ./shutdown.sh
+
 ## Documentation
 - User documentation: `USER_GUIDE.md`
 - Developer documentation: `DEVELOPER_GUIDE.md`
