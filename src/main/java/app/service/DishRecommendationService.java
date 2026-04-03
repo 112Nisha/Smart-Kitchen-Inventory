@@ -1,58 +1,84 @@
 package app.service;
 
-import app.alerts.*;
-import app.model.*;
-import app.notification.*;
-import app.repository.*;
-import app.service.*;
-import app.state.*;
-import app.web.*;
-
-
+import app.model.DishRecipe;
+import app.model.Ingredient;
+import app.model.RecipeIngredient;
+import app.repository.DishRepository;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class DishRecommendationService {
-    private final InventoryManager inventoryManager;
-    private final DishRepository dishRepository;
+        private final InventoryManager inventoryManager;
+        private final DishRepository dishRepository;
 
-    public DishRecommendationService(InventoryManager inventoryManager, DishRepository dishRepository) {
-        this.inventoryManager = inventoryManager;
-        this.dishRepository = dishRepository;
-    }
+        /* returns a list of recommended dishes based on available ingredients */
+        public DishRecommendationService(InventoryManager inventoryManager, DishRepository dishRepository) {
+                this.inventoryManager = inventoryManager;
+                this.dishRepository = dishRepository;
+        }
 
-    public List<DishRecipe> suggestForExpiringIngredients(String tenantId) {
-        Set<String> nearExpiryIngredients = inventoryManager.listIngredients(tenantId).stream()
-                .filter(ingredient -> ingredient.getState().canRecommendInDish())
-                .map(ingredient -> ingredient.getName().toLowerCase(Locale.ROOT))
-                .collect(Collectors.toSet());
+        public List<DishRecipe> suggestDishes(String tenantId) {
 
-        return dishRepository.findAll()
-                .stream()
-                .filter(dish -> dish.getIngredientNames()
-                        .stream()
-                        .map(name -> name.toLowerCase(Locale.ROOT))
-                        .anyMatch(nearExpiryIngredients::contains))
-                .toList();
-    }
+                List<Ingredient> inventory = inventoryManager.listIngredients(tenantId);
+                Map<String, List<Ingredient>> inventoryMap = inventory.stream()
+                                .filter(ingredient -> ingredient.getState().canRecommendInDish())
+                                .collect(Collectors.groupingBy(
+                                                ingredient -> ingredient.getName().toLowerCase(Locale.ROOT)));
 
-    public double estimatedSavedIngredientQuantity(String tenantId, String dishName) {
-        List<Ingredient> nearExpiry = inventoryManager.listIngredients(tenantId).stream()
-                .filter(ingredient -> ingredient.getState().canRecommendInDish())
-                .toList();
+                return dishRepository.findAll().stream()
+                                .filter(dish -> dish.getIngredients().stream()
+                                                .allMatch(recipeIngredient -> {
+                                                        String name = recipeIngredient.getName()
+                                                                        .toLowerCase(Locale.ROOT);
 
-        return dishRepository.findAll().stream()
-                .filter(dish -> dish.getName().equalsIgnoreCase(dishName))
-                .findFirst()
-                .map(dish -> nearExpiry.stream()
-                        .filter(ingredient -> dish.getIngredientNames()
-                                .stream()
-                                .anyMatch(name -> name.equalsIgnoreCase(ingredient.getName())))
-                        .mapToDouble(ingredient -> Math.min(ingredient.getQuantity(), Math.max(0.2, ingredient.getQuantity() * 0.25)))
-                        .sum())
-                .orElse(0.0);
-    }
+                                                        if (!inventoryMap.containsKey(name)) {
+                                                                return false;
+                                                        }
+
+                                                        double totalAvailable = inventoryMap.get(name).stream()
+                                                                        .filter(inv -> inv.getUnit().equalsIgnoreCase(
+                                                                                        recipeIngredient.getUnit()))
+                                                                        .mapToDouble(Ingredient::getQuantity)
+                                                                        .sum();
+
+                                                        return totalAvailable >= recipeIngredient.getQuantity();
+                                                }))
+                                .toList();
+        }
+
+        /**
+         * estimates the quantity of ingredients that would be saved by cooking a
+         * specific dish
+         */
+        public double estimatedSavedIngredientQuantity(String tenantId, String dishName) {
+                List<Ingredient> nearExpiry = inventoryManager.listIngredients(tenantId).stream()
+                                .filter(ingredient -> ingredient.getState().canRecommendInDish())
+                                .toList();
+
+                return dishRepository.findAll().stream()
+                                .filter(dish -> dish.getName().equalsIgnoreCase(dishName))
+                                .findFirst()
+                                .map(dish -> dish.getIngredients().stream()
+                                                .filter(recipeIngredient -> nearExpiry.stream()
+                                                                .anyMatch(inv -> inv.getName().equalsIgnoreCase(
+                                                                                recipeIngredient.getName())))
+                                                .mapToDouble(RecipeIngredient::getQuantity)
+                                                .sum())
+                                .orElse(0.0);
+        }
+
+        public List<DishRecipe> getAllRecipes() {
+                return dishRepository.findAll();
+        }
+
+        public void addRecipe(DishRecipe recipe) {
+                dishRepository.save(recipe);
+        }
+
+        public void deleteRecipe(Long recipeId) {
+                dishRepository.deleteById(recipeId);
+        }
 }

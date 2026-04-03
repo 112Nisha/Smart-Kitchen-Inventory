@@ -38,15 +38,6 @@
     </servlet-mapping>
 
     <servlet>
-        <servlet-name>recommendationServlet</servlet-name>
-        <servlet-class>app.web.DishRecommendationServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>recommendationServlet</servlet-name>
-        <url-pattern>/recommendations</url-pattern>
-    </servlet-mapping>
-
-    <servlet>
         <servlet-name>shoppingListServlet</servlet-name>
         <servlet-class>app.web.ShoppingListServlet</servlet-class>
     </servlet>
