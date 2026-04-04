@@ -1,6 +1,6 @@
 package app.web;
 
-import jakarta.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServlet;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
