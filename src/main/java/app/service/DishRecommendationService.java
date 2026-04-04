@@ -170,16 +170,18 @@ public class DishRecommendationService {
                         private boolean isWeightUnit(String unit) {
                                 String normalizedUnit = unit == null ? "" : unit.trim().toLowerCase(Locale.ROOT);
                                 return normalizedUnit.equals("kg")
+                                                || normalizedUnit.equals("kgs")
                                                 || normalizedUnit.equals("kilogram")
-                                                || normalizedUnit.equals("kilograms");
+                                                || normalizedUnit.equals("kilograms")
+                                                || normalizedUnit.equals("unit")
+                                                || normalizedUnit.equals("units");
                         }
 
                         private String normalizeUnitLabel(String unit) {
                                 String normalizedUnit = unit == null ? "" : unit.trim().toLowerCase(Locale.ROOT);
                                 return switch (normalizedUnit) {
-                                        case "kilogram", "kilograms" -> "kg";
+                                        case "kilogram", "kilograms", "kgs", "unit", "units" -> "kg";
                                         case "liter", "litre", "litres" -> "liters";
-                                        case "unit" -> "units";
                                         default -> normalizedUnit.isBlank() ? "unknown" : normalizedUnit;
                                 };
                         }
