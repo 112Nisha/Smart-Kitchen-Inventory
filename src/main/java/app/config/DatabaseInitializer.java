@@ -65,15 +65,11 @@ public class DatabaseInitializer {
     }
 
     private static void seedDataIfEmpty() {
-        String countSql = "SELECT COUNT(*) FROM dish_recipes";
-
         try (Connection conn = DriverManager.getConnection(URL);
-                Statement stmt = conn.createStatement();
-                ResultSet rs = stmt.executeQuery(countSql)) {
+                Statement stmt = conn.createStatement()) {
 
-            if (rs.next() && rs.getInt(1) == 0) {
-                insertSampleData(conn);
-            }
+            stmt.execute("PRAGMA foreign_keys = ON;");
+            insertSampleData(conn);
 
         } catch (SQLException e) {
             throw new RuntimeException("Failed to seed database", e);
@@ -88,7 +84,7 @@ public class DatabaseInitializer {
 
         try {
             stmt.executeUpdate("""
-                        INSERT INTO dish_recipes (id, name, instructions) VALUES
+                        INSERT OR IGNORE INTO dish_recipes (id, name, instructions) VALUES
                         (1, 'Tomato Basil Pasta',
                         '1. Boil water and cook the pasta until al dente.
                     2. Heat olive oil in a pan and sauté garlic for 1 minute.
@@ -98,7 +94,7 @@ public class DatabaseInitializer {
                     """);
 
             stmt.executeUpdate("""
-                        INSERT INTO dish_recipes (id, name, instructions) VALUES
+                        INSERT OR IGNORE INTO dish_recipes (id, name, instructions) VALUES
                         (2, 'Veggie Stir Fry',
                         '1. Wash and chop all vegetables.
                     2. Heat oil in a wok or pan.
@@ -108,7 +104,7 @@ public class DatabaseInitializer {
                     """);
 
             stmt.executeUpdate("""
-                        INSERT INTO dish_recipes (id, name, instructions) VALUES
+                        INSERT OR IGNORE INTO dish_recipes (id, name, instructions) VALUES
                         (3, 'Herb Omelette',
                         '1. Crack eggs into a bowl and whisk well.
                     2. Add chopped spinach, onion, and parsley.
@@ -118,7 +114,7 @@ public class DatabaseInitializer {
                     """);
 
             stmt.executeUpdate("""
-                        INSERT INTO dish_recipes (id, name, instructions) VALUES
+                        INSERT OR IGNORE INTO dish_recipes (id, name, instructions) VALUES
                         (4, 'Potato Soup',
                         '1. Peel and chop potatoes and onion.
                     2. Sauté onion and garlic in a pot.
@@ -128,7 +124,7 @@ public class DatabaseInitializer {
                     """);
 
             stmt.executeUpdate("""
-                        INSERT INTO dish_recipes (id, name, instructions) VALUES
+                        INSERT OR IGNORE INTO dish_recipes (id, name, instructions) VALUES
                         (5, 'Citrus Salad',
                         '1. Wash and chop lettuce.
                     2. Peel and segment the orange.
@@ -138,7 +134,46 @@ public class DatabaseInitializer {
                     """);
 
             stmt.executeUpdate("""
-                        INSERT INTO recipe_ingredients (recipe_id, ingredient_name, quantity, unit) VALUES
+                        INSERT OR IGNORE INTO dish_recipes (id, name, instructions) VALUES
+                        (6, 'Garlic Basil Spaghetti',
+                        '1. Boil spaghetti until al dente.
+                    2. Warm olive oil and sauté garlic.
+                    3. Toss spaghetti with basil and season to taste.
+                    4. Serve immediately.'),
+                        (7, 'Creamy Tomato Pasta',
+                        '1. Cook pasta and set aside.
+                    2. Simmer tomatoes with garlic.
+                    3. Add cream and stir until smooth.
+                    4. Toss in pasta and finish with basil.'),
+                        (8, 'Onion Garlic Saute',
+                        '1. Slice onions and mince garlic.
+                    2. Heat olive oil in a skillet.
+                    3. Saute onion until golden, then add garlic.
+                    4. Serve as a side or topping.'),
+                        (9, 'Spinach Garlic Egg Scramble',
+                        '1. Whisk eggs in a bowl.
+                    2. Saute spinach and garlic quickly.
+                    3. Pour eggs and scramble gently.
+                    4. Serve warm.'),
+                        (10, 'Tomato Onion Base Sauce',
+                        '1. Saute onion and garlic in olive oil.
+                    2. Add chopped tomatoes.
+                    3. Simmer until thick and glossy.
+                    4. Use as sauce base for other dishes.'),
+                        (11, 'Creamy Spinach Pasta',
+                        '1. Cook pasta.
+                    2. Saute spinach and garlic.
+                    3. Add cream and simmer.
+                    4. Mix with pasta and serve.'),
+                        (12, 'Simple Pasta Aglio e Olio',
+                        '1. Cook pasta.
+                    2. Warm olive oil with garlic.
+                    3. Toss with cooked pasta.
+                    4. Adjust seasoning and serve.');
+                    """);
+
+            stmt.executeUpdate("""
+                        INSERT OR IGNORE INTO recipe_ingredients (recipe_id, ingredient_name, quantity, unit) VALUES
                         (1, 'Tomato', 0.3, 'kg'),
                         (1, 'Basil', 0.05, 'kg'),
                         (1, 'Garlic', 0.02, 'kg'),
@@ -162,7 +197,40 @@ public class DatabaseInitializer {
                         (5, 'Lettuce', 0.2, 'kg'),
                         (5, 'Orange', 2, 'units'),
                         (5, 'Olive Oil', 0.05, 'liters'),
-                        (5, 'Lemon', 1, 'units');
+                        (5, 'Lemon', 1, 'units'),
+
+                        (6, 'Pasta', 0.25, 'kg'),
+                        (6, 'Garlic', 0.03, 'kg'),
+                        (6, 'Basil', 0.04, 'kg'),
+                        (6, 'Olive Oil', 0.03, 'liters'),
+
+                        (7, 'Pasta', 0.25, 'kg'),
+                        (7, 'Tomato', 0.25, 'kg'),
+                        (7, 'Cream', 0.12, 'liters'),
+                        (7, 'Garlic', 0.02, 'kg'),
+                        (7, 'Basil', 0.02, 'kg'),
+
+                        (8, 'Onion', 0.3, 'kg'),
+                        (8, 'Garlic', 0.03, 'kg'),
+                        (8, 'Olive Oil', 0.02, 'liters'),
+
+                        (9, 'Egg', 4, 'units'),
+                        (9, 'Spinach', 0.15, 'kg'),
+                        (9, 'Garlic', 0.01, 'kg'),
+
+                        (10, 'Tomato', 0.4, 'kg'),
+                        (10, 'Onion', 0.15, 'kg'),
+                        (10, 'Garlic', 0.02, 'kg'),
+                        (10, 'Olive Oil', 0.02, 'liters'),
+
+                        (11, 'Pasta', 0.2, 'kg'),
+                        (11, 'Spinach', 0.12, 'kg'),
+                        (11, 'Cream', 0.1, 'liters'),
+                        (11, 'Garlic', 0.02, 'kg'),
+
+                        (12, 'Pasta', 0.2, 'kg'),
+                        (12, 'Garlic', 0.025, 'kg'),
+                        (12, 'Olive Oil', 0.03, 'liters');
                     """);
 
             conn.commit();
