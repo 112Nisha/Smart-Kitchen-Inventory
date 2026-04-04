@@ -7,6 +7,7 @@ import app.model.RecipeIngredient;
 import app.repository.DishRepository;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -86,6 +87,7 @@ public class DishRecommendationService {
                                                 .orElseThrow(() -> new IllegalArgumentException("Dish not found: " + dishName));
 
                                 List<Ingredient> inventorySnapshot = inventoryManager.listIngredients(tenantId);
+                                List<PlannedConsumption> plannedConsumptions = new ArrayList<>();
 
                                 double totalUsedWeightKg = 0.0;
                                 double nearExpiryUsedKg = 0.0;
@@ -115,7 +117,10 @@ public class DishRecommendationService {
                                                                 + recipeIngredient.getUnit() + ")");
                                         }
 
+                                        String unitLabel = normalizeUnitLabel(recipeIngredient.getUnit());
+                                        boolean weightUnit = isWeightUnit(recipeIngredient.getUnit());
                                         double remainingToConsume = requiredQuantity;
+
                                         for (Ingredient candidate : candidates) {
                                                 if (remainingToConsume <= 1e-9) {
                                                         break;
@@ -126,34 +131,50 @@ public class DishRecommendationService {
                                                         continue;
                                                 }
 
-                                                Optional<Ingredient> updated = inventoryManager.useIngredient(
-                                                                tenantId,
-                                                                candidate.getId(),
-                                                                consumed
-                                                );
-                                                if (updated.isEmpty()) {
-                                                        throw new IllegalStateException("Ingredient disappeared during cook log: "
-                                                                        + candidate.getName());
-                                                }
-
+                                                // Reserve quantities in-memory first so validation and deduction are consistent.
                                                 candidate.setQuantity(candidate.getQuantity() - consumed);
                                                 remainingToConsume -= consumed;
+                                                plannedConsumptions.add(new PlannedConsumption(
+                                                                candidate.getId(),
+                                                                candidate.getName(),
+                                                                consumed,
+                                                                unitLabel,
+                                                                weightUnit,
+                                                                candidate.getLifecycle() == IngredientLifecycle.NEAR_EXPIRY
+                                                ));
+                                        }
 
-                                                String unitLabel = normalizeUnitLabel(recipeIngredient.getUnit());
-                                                usedByUnit.merge(unitLabel, consumed, Double::sum);
+                                        if (remainingToConsume > 1e-9) {
+                                                throw new IllegalStateException("Insufficient inventory for ingredient: "
+                                                                + recipeIngredient.getName() + " (required " + requiredQuantity + " "
+                                                                + recipeIngredient.getUnit() + ")");
+                                        }
+                                }
 
-                                                if (isWeightUnit(recipeIngredient.getUnit())) {
-                                                        totalUsedWeightKg += consumed;
+                                for (PlannedConsumption plannedConsumption : plannedConsumptions) {
+                                        Optional<Ingredient> updated = inventoryManager.useIngredient(
+                                                        tenantId,
+                                                        plannedConsumption.ingredientId(),
+                                                        plannedConsumption.quantity()
+                                        );
+                                        if (updated.isEmpty()) {
+                                                throw new IllegalStateException("Ingredient disappeared during cook log: "
+                                                                + plannedConsumption.ingredientName());
+                                        }
+
+                                        usedByUnit.merge(plannedConsumption.unitLabel(), plannedConsumption.quantity(), Double::sum);
+
+                                        if (plannedConsumption.weightUnit()) {
+                                                totalUsedWeightKg += plannedConsumption.quantity();
+                                        }
+
+                                        if (plannedConsumption.nearExpiry()) {
+                                                if (plannedConsumption.unitLabel().equals("kg")) {
+                                                        nearExpiryUsedKg += plannedConsumption.quantity();
+                                                } else if (plannedConsumption.unitLabel().equals("liters")) {
+                                                        nearExpiryUsedLiters += plannedConsumption.quantity();
                                                 }
-
-                                                if (candidate.getLifecycle() == IngredientLifecycle.NEAR_EXPIRY) {
-                                                        if (unitLabel.equals("kg")) {
-                                                                nearExpiryUsedKg += consumed;
-                                                        } else if (unitLabel.equals("liters")) {
-                                                                nearExpiryUsedLiters += consumed;
-                                                        }
-                                                        rescuedNearExpiryIngredients.add(candidate.getName());
-                                                }
+                                                rescuedNearExpiryIngredients.add(plannedConsumption.ingredientName());
                                         }
                                 }
 
@@ -205,6 +226,16 @@ public class DishRecommendationService {
                         double nearExpiryUsedLiters,
                         Map<String, Double> usedByUnit,
                         List<String> rescuedNearExpiryIngredients
+        ) {
+        }
+
+        private record PlannedConsumption(
+                        String ingredientId,
+                        String ingredientName,
+                        double quantity,
+                        String unitLabel,
+                        boolean weightUnit,
+                        boolean nearExpiry
         ) {
         }
 }

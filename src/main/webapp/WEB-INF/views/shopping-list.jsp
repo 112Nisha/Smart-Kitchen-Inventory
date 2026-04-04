@@ -1,4 +1,5 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <%@ include file="_header.jspf" %>
 
 <section class="card">
@@ -17,9 +18,9 @@
         <c:forEach var="item" items="${items}">
             <tr>
                 <td>${item.name}</td>
-                <td>${item.quantity} ${item.unit}</td>
-                <td>${item.lowStockThreshold}</td>
-                <td>${(item.lowStockThreshold * 2) - item.quantity} ${item.unit}</td>
+                <td><fmt:formatNumber value="${item.quantity}" minFractionDigits="2" maxFractionDigits="2"/> ${item.unit}</td>
+                <td><fmt:formatNumber value="${item.lowStockThreshold}" minFractionDigits="2" maxFractionDigits="2"/></td>
+                <td><fmt:formatNumber value="${(item.lowStockThreshold * 2) - item.quantity}" minFractionDigits="2" maxFractionDigits="2"/> ${item.unit}</td>
             </tr>
         </c:forEach>
         </tbody>
