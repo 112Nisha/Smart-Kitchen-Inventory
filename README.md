@@ -31,6 +31,7 @@ mvn tomcat7:run
 ```
 Open:
 `http://localhost:8080/smart-kitchen-inventory`
+Note: Refresh the page with a control shift r 
 
 
 ## Documentation
