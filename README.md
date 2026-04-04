@@ -14,7 +14,7 @@ Prototype implementation of a web-based restaurant inventory system focused on r
 - Frontend: JSP, HTML, CSS
 - Backend: Java Servlets
 - Packaging: Maven WAR
-- Server: Apache Tomcat 10+
+- Server: Apache Tomcat 
 - Data layer: in-memory repository (prototype)
 
 ## Design and Architecture
