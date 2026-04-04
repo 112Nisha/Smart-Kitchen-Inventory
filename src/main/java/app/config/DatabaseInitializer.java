@@ -22,6 +22,7 @@ public class DatabaseInitializer {
         createDataFolder();
         createTables();
         seedDataIfEmpty();
+        normalizeUnitsToKg();
     }
 
     private static void createDataFolder() {
@@ -73,6 +74,22 @@ public class DatabaseInitializer {
 
         } catch (SQLException e) {
             throw new RuntimeException("Failed to seed database", e);
+        }
+    }
+
+    private static void normalizeUnitsToKg() {
+        try (Connection conn = DriverManager.getConnection(URL);
+                Statement stmt = conn.createStatement()) {
+
+            stmt.execute("PRAGMA foreign_keys = ON;");
+            stmt.executeUpdate("""
+                    UPDATE recipe_ingredients
+                    SET unit = 'kg'
+                    WHERE LOWER(TRIM(unit)) IN ('unit', 'units', 'kgs');
+                    """);
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to normalize recipe ingredient units to kg", e);
         }
     }
 
@@ -184,7 +201,7 @@ public class DatabaseInitializer {
                         (2, 'Carrot', 0.15, 'kg'),
                         (2, 'Soy Sauce', 0.05, 'liters'),
 
-                        (3, 'Egg', 3, 'units'),
+                        (3, 'Egg', 3, 'kg'),
                         (3, 'Spinach', 0.1, 'kg'),
                         (3, 'Onion', 0.1, 'kg'),
                         (3, 'Parsley', 0.02, 'kg'),
@@ -195,9 +212,9 @@ public class DatabaseInitializer {
                         (4, 'Garlic', 0.02, 'kg'),
 
                         (5, 'Lettuce', 0.2, 'kg'),
-                        (5, 'Orange', 2, 'units'),
+                        (5, 'Orange', 2, 'kg'),
                         (5, 'Olive Oil', 0.05, 'liters'),
-                        (5, 'Lemon', 1, 'units'),
+                        (5, 'Lemon', 1, 'kg'),
 
                         (6, 'Pasta', 0.25, 'kg'),
                         (6, 'Garlic', 0.03, 'kg'),
@@ -214,7 +231,7 @@ public class DatabaseInitializer {
                         (8, 'Garlic', 0.03, 'kg'),
                         (8, 'Olive Oil', 0.02, 'liters'),
 
-                        (9, 'Egg', 4, 'units'),
+                        (9, 'Egg', 4, 'kg'),
                         (9, 'Spinach', 0.15, 'kg'),
                         (9, 'Garlic', 0.01, 'kg'),
 
