@@ -21,6 +21,9 @@ public class DishRecommendationServlet extends BaseServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
+        resp.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+        resp.setHeader("Pragma", "no-cache");
+
         String tenant = tenantOrDefault(req.getParameter("tenant"));
 
         List<DishRecipe> recommendations =

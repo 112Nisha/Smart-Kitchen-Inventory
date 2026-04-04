@@ -84,4 +84,20 @@ class InventoryManagerRobustnessTest {
         assertThrows(IllegalStateException.class, () -> InventoryManager.getInstance(repoB, 3));
         assertThrows(IllegalStateException.class, () -> InventoryManager.getInstance(repoA, 5));
     }
+
+    @Test
+    void useIngredientRoundsRemainingQuantityToTwoDecimals() {
+        InventoryManager.resetInstanceForTests();
+        IngredientRepository repository = new IngredientRepository();
+        InventoryManager manager = InventoryManager.getInstance(repository, 3);
+
+        Ingredient added = manager.addIngredient(
+                new Ingredient("tenant-robust", "Milk", 1.0, "liters", LocalDate.now().plusDays(3), 0.5)
+        );
+
+        manager.useIngredient("tenant-robust", added.getId(), 0.335);
+
+        Ingredient persisted = manager.findById("tenant-robust", added.getId()).orElseThrow();
+        assertEquals(0.67, persisted.getQuantity(), 1e-9);
+    }
 }

@@ -1,4 +1,5 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <%@ include file="_header.jspf" %>
 
 <c:if test="${not empty param.error}">
@@ -18,7 +19,13 @@
         <input name="quantity" type="number" step="0.01" min="0" required>
 
         <label>Unit</label>
-        <input name="unit" placeholder="kg / units / liters" required>
+        <div class="unit-choice" role="radiogroup" aria-label="Unit">
+            <input type="radio" id="unit-kg" name="unit" value="kg" checked>
+            <label for="unit-kg" class="unit-choice-button">kg</label>
+
+            <input type="radio" id="unit-liter" name="unit" value="liters">
+            <label for="unit-liter" class="unit-choice-button">liter</label>
+        </div>
 
         <label>Expiry Date</label>
         <input name="expiryDate" type="date" required>
@@ -47,10 +54,10 @@
         <c:forEach var="item" items="${ingredients}">
             <tr>
                 <td>${item.name}</td>
-                <td>${item.quantity} ${item.unit}</td>
+                <td><fmt:formatNumber value="${item.quantity}" minFractionDigits="2" maxFractionDigits="2"/> ${item.unit}</td>
                 <td>${item.expiryDate}</td>
                 <td>${item.lifecycle}</td>
-                <td>${item.lowStockThreshold}</td>
+                <td><fmt:formatNumber value="${item.lowStockThreshold}" minFractionDigits="2" maxFractionDigits="2"/></td>
                 <td>
                     <form class="inline" method="post" action="${pageContext.request.contextPath}/inventory">
                         <input type="hidden" name="action" value="use">

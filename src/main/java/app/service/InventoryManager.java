@@ -3,6 +3,8 @@ package app.service;
 import app.model.Ingredient;
 import app.repository.IngredientRepository;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,8 @@ public final class InventoryManager {
     public Ingredient addIngredient(Ingredient ingredient) {
         validateTenantId(Objects.requireNonNull(ingredient, "ingredient is required").getTenantId());
         validateIngredient(ingredient);
+        ingredient.setQuantity(roundToTwoDecimals(ingredient.getQuantity()));
+        ingredient.setLowStockThreshold(roundToTwoDecimals(ingredient.getLowStockThreshold()));
         Ingredient saved = ingredientRepository.save(ingredient);
         invalidateTenantCache(ingredient.getTenantId());
         return saved;
@@ -68,10 +72,10 @@ public final class InventoryManager {
         Optional<Ingredient> existing = ingredientRepository.findById(tenantId, ingredientId);
         existing.ifPresent(item -> {
             item.setName(name);
-            item.setQuantity(quantity);
+            item.setQuantity(roundToTwoDecimals(quantity));
             item.setUnit(unit);
             item.setExpiryDate(expiryDate);
-            item.setLowStockThreshold(lowStockThreshold);
+            item.setLowStockThreshold(roundToTwoDecimals(lowStockThreshold));
             item.refreshState(LocalDate.now(), nearExpiryDays);
             ingredientRepository.save(item);
             invalidateTenantCache(tenantId);
@@ -88,7 +92,7 @@ public final class InventoryManager {
 
         Optional<Ingredient> existing = ingredientRepository.findById(tenantId, ingredientId);
         existing.ifPresent(item -> {
-            double updated = Math.max(0, item.getQuantity() - usedQuantity);
+            double updated = roundToTwoDecimals(Math.max(0, item.getQuantity() - usedQuantity));
             item.setQuantity(updated);
             item.refreshState(LocalDate.now(), nearExpiryDays);
             ingredientRepository.save(item);
@@ -114,7 +118,10 @@ public final class InventoryManager {
     public List<Ingredient> listIngredients(String tenantId) {
         validateTenantId(tenantId);
         List<Ingredient> items = tenantCache.computeIfAbsent(tenantId, key -> ingredientRepository.findByTenant(tenantId));
-        items.forEach(item -> item.refreshState(LocalDate.now(), nearExpiryDays));
+        items.forEach(item -> {
+            normalizePrecision(item);
+            item.refreshState(LocalDate.now(), nearExpiryDays);
+        });
         return List.copyOf(items);
     }
 
@@ -122,8 +129,21 @@ public final class InventoryManager {
         validateTenantId(tenantId);
         validateIngredientId(ingredientId);
         Optional<Ingredient> found = ingredientRepository.findById(tenantId, ingredientId);
-        found.ifPresent(item -> item.refreshState(LocalDate.now(), nearExpiryDays));
+        found.ifPresent(item -> {
+            normalizePrecision(item);
+            item.refreshState(LocalDate.now(), nearExpiryDays);
+        });
         return found;
+    }
+
+    private void normalizePrecision(Ingredient ingredient) {
+        ingredient.setQuantity(roundToTwoDecimals(ingredient.getQuantity()));
+        ingredient.setLowStockThreshold(roundToTwoDecimals(ingredient.getLowStockThreshold()));
+    }
+
+    private double roundToTwoDecimals(double value) {
+        double rounded = BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).doubleValue();
+        return rounded == -0.0d ? 0.0d : rounded;
     }
 
     private void validateIngredient(Ingredient ingredient) {

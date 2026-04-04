@@ -215,6 +215,46 @@ input:focus {
     box-shadow: 0 0 0 3px var(--gold-dim);
 }
 
+.unit-choice {
+    display: inline-flex;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.unit-choice input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.unit-choice-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    padding: 0.62rem 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: #ffffff;
+    color: var(--ink-2);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: lowercase;
+    cursor: pointer;
+    transition: border-color 0.08s linear, background-color 0.08s linear, color 0.08s linear;
+}
+
+.unit-choice input[type="radio"]:checked + .unit-choice-button {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #ffffff;
+}
+
+.unit-choice input[type="radio"]:focus-visible + .unit-choice-button {
+    outline: 2px solid var(--gold-light);
+    outline-offset: 2px;
+}
+
 /* ─── BUTTONS ────────────────────────────────────────── */
 button {
     font-size: 0.9rem;
