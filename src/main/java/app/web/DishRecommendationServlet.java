@@ -1,6 +1,5 @@
 package app.web;
 
-import app.model.DishRecipe;
 import app.service.DishRecommendationService;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -21,13 +20,15 @@ public class DishRecommendationServlet extends BaseServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
+        resp.setCharacterEncoding("UTF-8");
+        resp.setContentType("text/html; charset=UTF-8");
         resp.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
         resp.setHeader("Pragma", "no-cache");
 
         String tenant = tenantOrDefault(req.getParameter("tenant"));
 
-        List<DishRecipe> recommendations =
-                services().dishRecommendationService().suggestDishes(tenant);
+        List<DishRecommendationService.DishSuggestion> recommendations =
+            services().dishRecommendationService().suggestDishesByExpiryPriority(tenant);
 
         req.setAttribute("tenant", tenant);
         req.setAttribute("recommendations", recommendations);

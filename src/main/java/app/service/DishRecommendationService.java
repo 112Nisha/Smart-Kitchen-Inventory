@@ -6,8 +6,11 @@ import app.model.IngredientLifecycle;
 import app.model.RecipeIngredient;
 import app.repository.DishRepository;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -17,6 +20,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class DishRecommendationService {
+        private static final double COVERAGE_WEIGHT = 0.45;
+        private static final double URGENCY_WEIGHT = 0.35;
+        private static final double QUANTITY_WEIGHT = 0.20;
+
         private final InventoryManager inventoryManager;
         private final DishRepository dishRepository;
 
@@ -28,31 +35,186 @@ public class DishRecommendationService {
 
         public List<DishRecipe> suggestDishes(String tenantId) {
 
+                return suggestDishesByExpiryPriority(tenantId).stream()
+                                .map(DishSuggestion::getDish)
+                                .toList();
+        }
+
+        public List<DishSuggestion> suggestDishesByExpiryPriority(String tenantId) {
+
                 List<Ingredient> inventory = inventoryManager.listIngredients(tenantId);
                 Map<String, List<Ingredient>> inventoryMap = inventory.stream()
                                 .filter(ingredient -> ingredient.getState().canRecommendInDish())
+                                .filter(ingredient -> ingredient.getQuantity() > 1e-9)
                                 .collect(Collectors.groupingBy(
                                                 ingredient -> ingredient.getName().toLowerCase(Locale.ROOT)));
 
-                return dishRepository.findAll().stream()
-                                .filter(dish -> dish.getIngredients().stream()
-                                                .allMatch(recipeIngredient -> {
-                                                        String name = recipeIngredient.getName()
-                                                                        .toLowerCase(Locale.ROOT);
+                LocalDate today = LocalDate.now();
+                List<DishSuggestion> suggestions = dishRepository.findAll().stream()
+                                .map(dish -> buildDishSuggestion(dish, inventoryMap, today))
+                                .filter(Optional::isPresent)
+                                .map(Optional::get)
+                                .collect(Collectors.toCollection(ArrayList::new));
 
-                                                        if (!inventoryMap.containsKey(name)) {
-                                                                return false;
-                                                        }
+                suggestions.sort(
+                                Comparator.comparingDouble(DishSuggestion::getExpiryRescueScore).reversed()
+                                                .thenComparing(
+                                                                Comparator.comparingInt(DishSuggestion::getExpiringIngredientCount)
+                                                                                .reversed())
+                                                .thenComparing(
+                                                                suggestion -> suggestion.getDish().getName(),
+                                                                String.CASE_INSENSITIVE_ORDER));
 
-                                                        double totalAvailable = inventoryMap.get(name).stream()
-                                                                        .filter(inv -> inv.getUnit().equalsIgnoreCase(
-                                                                                        recipeIngredient.getUnit()))
-                                                                        .mapToDouble(Ingredient::getQuantity)
-                                                                        .sum();
+                return List.copyOf(suggestions);
+        }
 
-                                                        return totalAvailable >= recipeIngredient.getQuantity();
-                                                }))
-                                .toList();
+        private Optional<DishSuggestion> buildDishSuggestion(
+                        DishRecipe dish,
+                        Map<String, List<Ingredient>> inventoryMap,
+                        LocalDate today
+        ) {
+                List<SuggestionIngredient> suggestionIngredients = new ArrayList<>();
+
+                double totalRequiredQuantity = 0.0;
+                double nearExpiryUsedQuantity = 0.0;
+                double urgencyAccumulator = 0.0;
+                int nearExpiryIngredientCount = 0;
+
+                for (RecipeIngredient recipeIngredient : dish.getIngredients()) {
+                        String ingredientKey = recipeIngredient.getName().toLowerCase(Locale.ROOT);
+                        String recipeUnit = normalizeComparableUnit(recipeIngredient.getUnit());
+
+                        List<Ingredient> matchingInventory = inventoryMap.getOrDefault(ingredientKey, List.of()).stream()
+                                        .filter(ingredient -> normalizeComparableUnit(ingredient.getUnit()).equals(recipeUnit))
+                                        .toList();
+
+                        double availableQuantity = matchingInventory.stream()
+                                        .mapToDouble(Ingredient::getQuantity)
+                                        .sum();
+
+                        if (availableQuantity + 1e-9 < recipeIngredient.getQuantity()) {
+                                return Optional.empty();
+                        }
+
+                        totalRequiredQuantity += Math.max(0, recipeIngredient.getQuantity());
+
+                        double nearExpiryAvailableQuantity = matchingInventory.stream()
+                                        .filter(ingredient -> ingredient.getLifecycle() == IngredientLifecycle.NEAR_EXPIRY)
+                                        .mapToDouble(Ingredient::getQuantity)
+                                        .sum();
+
+                        double nearExpiryUsedForIngredient = Math.min(
+                                        recipeIngredient.getQuantity(),
+                                        nearExpiryAvailableQuantity
+                        );
+                        boolean expiringSoon = nearExpiryUsedForIngredient > 1e-9;
+
+                        String emoji = "";
+                        String expiryHint = "";
+
+                        if (expiringSoon) {
+                                nearExpiryIngredientCount++;
+                                nearExpiryUsedQuantity += nearExpiryUsedForIngredient;
+
+                                long daysUntilExpiry = matchingInventory.stream()
+                                                .filter(ingredient -> ingredient.getLifecycle() == IngredientLifecycle.NEAR_EXPIRY)
+                                                .mapToLong(ingredient -> Math.max(0,
+                                                                ChronoUnit.DAYS.between(today, ingredient.getExpiryDate())))
+                                                .min()
+                                                .orElse(0L);
+
+                                urgencyAccumulator += urgencyScoreByDays(daysUntilExpiry);
+                                emoji = buildExpiryEmoji(daysUntilExpiry);
+                                expiryHint = buildExpiryHint(daysUntilExpiry);
+                        }
+
+                        suggestionIngredients.add(new SuggestionIngredient(
+                                        recipeIngredient.getName(),
+                                        roundToTwoDecimals(recipeIngredient.getQuantity()),
+                                        normalizeUnitLabel(recipeIngredient.getUnit()),
+                                        expiringSoon,
+                                        emoji,
+                                        expiryHint
+                        ));
+                }
+
+                double expiryRescueScore = calculateExpiryRescueScore(
+                                dish.getIngredients().size(),
+                                nearExpiryIngredientCount,
+                                urgencyAccumulator,
+                                totalRequiredQuantity,
+                                nearExpiryUsedQuantity
+                );
+
+                return Optional.of(new DishSuggestion(
+                                dish,
+                                expiryRescueScore,
+                                nearExpiryIngredientCount,
+                                List.copyOf(suggestionIngredients)
+                ));
+        }
+
+        private double calculateExpiryRescueScore(
+                        int totalIngredientCount,
+                        int nearExpiryIngredientCount,
+                        double urgencyAccumulator,
+                        double totalRequiredQuantity,
+                        double nearExpiryUsedQuantity
+        ) {
+                if (totalIngredientCount <= 0) {
+                        return 0.0;
+                }
+
+                double nearExpiryCoverage = nearExpiryIngredientCount / (double) totalIngredientCount;
+                double urgency = nearExpiryIngredientCount == 0 ? 0.0 : urgencyAccumulator / nearExpiryIngredientCount;
+                double rescueQuantityShare = totalRequiredQuantity <= 1e-9 ? 0.0 : nearExpiryUsedQuantity / totalRequiredQuantity;
+
+                double score = 100.0 * ((COVERAGE_WEIGHT * nearExpiryCoverage)
+                                + (URGENCY_WEIGHT * urgency)
+                                + (QUANTITY_WEIGHT * rescueQuantityShare));
+
+                return roundToTwoDecimals(Math.max(0.0, Math.min(100.0, score)));
+        }
+
+        private double urgencyScoreByDays(long daysUntilExpiry) {
+                long clampedDays = Math.max(0, Math.min(daysUntilExpiry, 7));
+                return 1.0 - (clampedDays / 7.0);
+        }
+
+        private String buildExpiryEmoji(long daysUntilExpiry) {
+                if (daysUntilExpiry <= 1) {
+                        return "&#128308;";
+                }
+                if (daysUntilExpiry <= 3) {
+                        return "&#128992;";
+                }
+                return "&#128993;";
+        }
+
+        private String buildExpiryHint(long daysUntilExpiry) {
+                if (daysUntilExpiry <= 0) {
+                        return "This is expiring today! Try to use now.";
+                }
+                if (daysUntilExpiry == 1) {
+                        return "This is expiring tomorrow! Try to use.";
+                }
+                if (daysUntilExpiry <= 3) {
+                        return "This is expiring soon! Try to use.";
+                }
+                return "Use this week to avoid waste.";
+        }
+
+        private String normalizeComparableUnit(String unit) {
+                String normalizedUnit = unit == null ? "" : unit.trim().toLowerCase(Locale.ROOT);
+                return switch (normalizedUnit) {
+                        case "kilogram", "kilograms", "kg", "kgs", "unit", "units" -> "kg";
+                        case "liter", "litre", "liters", "litres" -> "liters";
+                        default -> normalizedUnit;
+                };
+        }
+
+        private double roundToTwoDecimals(double value) {
+                return Math.round(value * 100.0) / 100.0;
         }
 
         /**
@@ -217,6 +379,90 @@ public class DishRecommendationService {
 
         public void deleteRecipe(Long recipeId) {
                 dishRepository.deleteById(recipeId);
+        }
+
+        public static final class DishSuggestion {
+                private final DishRecipe dish;
+                private final double expiryRescueScore;
+                private final int expiringIngredientCount;
+                private final List<SuggestionIngredient> ingredients;
+
+                public DishSuggestion(
+                                DishRecipe dish,
+                                double expiryRescueScore,
+                                int expiringIngredientCount,
+                                List<SuggestionIngredient> ingredients
+                ) {
+                        this.dish = dish;
+                        this.expiryRescueScore = expiryRescueScore;
+                        this.expiringIngredientCount = expiringIngredientCount;
+                        this.ingredients = ingredients;
+                }
+
+                public DishRecipe getDish() {
+                        return dish;
+                }
+
+                public double getExpiryRescueScore() {
+                        return expiryRescueScore;
+                }
+
+                public int getExpiringIngredientCount() {
+                        return expiringIngredientCount;
+                }
+
+                public List<SuggestionIngredient> getIngredients() {
+                        return ingredients;
+                }
+        }
+
+        public static final class SuggestionIngredient {
+                private final String name;
+                private final double quantity;
+                private final String unit;
+                private final boolean expiringSoon;
+                private final String emoji;
+                private final String expiryHint;
+
+                public SuggestionIngredient(
+                                String name,
+                                double quantity,
+                                String unit,
+                                boolean expiringSoon,
+                                String emoji,
+                                String expiryHint
+                ) {
+                        this.name = name;
+                        this.quantity = quantity;
+                        this.unit = unit;
+                        this.expiringSoon = expiringSoon;
+                        this.emoji = emoji;
+                        this.expiryHint = expiryHint;
+                }
+
+                public String getName() {
+                        return name;
+                }
+
+                public double getQuantity() {
+                        return quantity;
+                }
+
+                public String getUnit() {
+                        return unit;
+                }
+
+                public boolean isExpiringSoon() {
+                        return expiringSoon;
+                }
+
+                public String getEmoji() {
+                        return emoji;
+                }
+
+                public String getExpiryHint() {
+                        return expiryHint;
+                }
         }
 
         public record CookDishResult(

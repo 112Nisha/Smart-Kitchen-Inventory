@@ -1,5 +1,7 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <%@ include file="_header.jspf" %>
 
 <c:if test="${not empty impactDish}">
@@ -92,14 +94,34 @@
                 </tr>
                 </thead>
                 <tbody>
-                <c:forEach var="dish" items="${recommendations}">
+                <c:forEach var="suggestion" items="${recommendations}">
                     <tr>
-                        <td>${dish.name}</td>
+                        <td>
+                            <div class="dish-name-row">
+                                <span><c:out value="${suggestion.dish.name}"/></span>
+                                <span class="dish-score-badge">
+                                    &#128293; Rescue Score
+                                    <fmt:formatNumber value="${suggestion.expiryRescueScore}" minFractionDigits="2" maxFractionDigits="2"/>
+                                </span>
+                            </div>
+                            <span class="dish-score-note">
+                                <c:out value="${suggestion.expiringIngredientCount}"/> ingredients are expiring soon.
+                            </span>
+                        </td>
 
                         <td>
                             <ul style="margin: 0; padding-left: 18px;">
-                                <c:forEach var="ingredient" items="${dish.ingredients}">
-                                    <li>${ingredient.name} - ${ingredient.quantity} ${ingredient.unit}</li>
+                                <c:forEach var="ingredient" items="${suggestion.ingredients}">
+                                    <li>
+                                        <c:out value="${ingredient.name}"/> -
+                                        <fmt:formatNumber value="${ingredient.quantity}" minFractionDigits="2" maxFractionDigits="2"/>
+                                        <c:out value="${ingredient.unit}"/>
+                                        <c:if test="${ingredient.expiringSoon}">
+                                            <span class="ingredient-expiry-tip">
+                                                <c:out value="${ingredient.emoji}" escapeXml="false"/> <c:out value="${ingredient.expiryHint}"/>
+                                            </span>
+                                        </c:if>
+                                    </li>
                                 </c:forEach>
                             </ul>
                         </td>
@@ -112,13 +134,13 @@
                                 font-size: 14px;
                                 line-height: 1.6;
                                 color: #333;
-                            "><c:out value="${dish.instructions}" /></pre>
+                            "><c:out value="${suggestion.dish.instructions}" /></pre>
                         </td>
 
                         <td>
                             <form method="post" action="${pageContext.request.contextPath}/recommendations">
                                 <input type="hidden" name="tenant" value="${tenant}">
-                                <input type="hidden" name="dishName" value="${dish.name}">
+                                <input type="hidden" name="dishName" value="${suggestion.dish.name}">
                                 <button type="submit">Log as Cooked</button>
                             </form>
                         </td>

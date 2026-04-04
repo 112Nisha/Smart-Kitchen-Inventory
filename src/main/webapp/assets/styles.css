@@ -351,6 +351,42 @@ tbody tr:hover {
     background: var(--surface-hover);
 }
 
+.dish-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.dish-score-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #8a4a00;
+    background: rgba(245, 158, 11, 0.16);
+    border: 1px solid rgba(217, 119, 6, 0.24);
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+}
+
+.dish-score-note {
+    display: inline-block;
+    margin-top: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #7c8a9f;
+}
+
+.ingredient-expiry-tip {
+    display: inline-block;
+    margin-left: 0.35rem;
+    color: #9a4f00;
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+
 /* ─── FEEDBACK MESSAGES ──────────────────────────────── */
 .error,
 .success {
