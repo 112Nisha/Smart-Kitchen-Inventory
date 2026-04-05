@@ -70,11 +70,11 @@
 
     <p style="margin-bottom: 16px;">
         <a href="${pageContext.request.contextPath}/recipes/add?tenant=${tenant}">
-            <button type="button">Add New Recipe</button>
+            <button type="button">Add New Dish</button>
         </a>
 
         <a href="${pageContext.request.contextPath}/recipes/manage?tenant=${tenant}" style="margin-left: 10px;">
-            <button type="button">Manage / Delete Recipes</button>
+            <button type="button">Manage Dishes</button>
         </a>
     </p>
 

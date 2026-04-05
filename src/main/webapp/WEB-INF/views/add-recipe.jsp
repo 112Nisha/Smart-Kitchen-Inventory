@@ -14,7 +14,7 @@
         </c:if>
 
         <section class="card">
-            <h2>Add New Recipe</h2>
+            <h2>Add New Dish</h2>
 
             <p>
                 <a href="${pageContext.request.contextPath}/recommendations?tenant=${tenant}">
@@ -26,7 +26,7 @@
                 <input type="hidden" name="tenant" value="${tenant}">
 
                 <p>
-                    <label>Recipe Name:</label><br>
+                    <label>Dish Name:</label><br>
                     <input type="text" name="recipeName" required style="width: 100%;">
                 </p>
 
@@ -46,11 +46,11 @@
                             style="width: 100px;">
 
                         <div class="unit-choice" role="radiogroup" aria-label="Ingredient Unit">
-                            <input type="radio" id="unit-kg-0" name="unitDisplay_0" value="kg" checked
+                            <input type="radio" id="unit-kg-0" name="unitDisplay0" value="kg" checked
                                 onchange="updateUnit(this, 'kg')">
                             <label for="unit-kg-0" class="unit-choice-button">kg</label>
 
-                            <input type="radio" id="unit-liter-0" name="unitDisplay_0" value="liters"
+                            <input type="radio" id="unit-liter-0" name="unitDisplay0" value="liters"
                                 onchange="updateUnit(this, 'liters')">
                             <label for="unit-liter-0" class="unit-choice-button">liter</label>
                         </div>
@@ -66,7 +66,7 @@
                 </p>
 
                 <p>
-                    <button type="submit">Save Recipe</button>
+                    <button type="submit">Save Dish</button>
                 </p>
             </form>
         </section>
@@ -95,23 +95,23 @@
                 const currentIndex = ingredientIndex++;
 
                 row.innerHTML = `
-            <input type="text" name="ingredientName" placeholder="Ingredient name" required style="flex: 2;">
-            <input type="number" step="any" min="0" name="ingredientQuantity" placeholder="Qty" required style="width: 100px;">
+    <input type="text" name="ingredientName" placeholder="Ingredient name" required style="flex: 2;">
+    <input type="number" step="any" min="0" name="ingredientQuantity" placeholder="Qty" required style="width: 100px;">
 
-            <div class="unit-choice" role="radiogroup" aria-label="Ingredient Unit">
-                <input type="radio" id="unit-kg-${currentIndex}" name="unitDisplay_${currentIndex}" value="kg" checked
-                       onchange="updateUnit(this, 'kg')">
-                <label for="unit-kg-${currentIndex}" class="unit-choice-button">kg</label>
+    <div class="unit-choice" role="radiogroup" aria-label="Ingredient Unit">
+        <input type="radio" id="unit-kg-\${currentIndex}" name="unitDisplay\${currentIndex}" value="kg" checked
+               onchange="updateUnit(this, 'kg')">
+        <label for="unit-kg-\${currentIndex}" class="unit-choice-button">kg</label>
 
-                <input type="radio" id="unit-liter-${currentIndex}" name="unitDisplay_${currentIndex}" value="liters"
-                       onchange="updateUnit(this, 'liters')">
-                <label for="unit-liter-${currentIndex}" class="unit-choice-button">liter</label>
-            </div>
+        <input type="radio" id="unit-liter-\${currentIndex}" name="unitDisplay\${currentIndex}" value="liters"
+               onchange="updateUnit(this, 'liters')">
+        <label for="unit-liter-\${currentIndex}" class="unit-choice-button">liter</label>
+    </div>
 
-            <input type="hidden" name="ingredientUnit" value="kg">
+    <input type="hidden" name="ingredientUnit" value="kg">
 
-            <button type="button" onclick="removeIngredient(this)" style="margin-left: 8px;">Remove</button>
-        `;
+    <button type="button" onclick="removeIngredient(this)" style="margin-left: 8px;">Remove</button>
+`;
 
                 container.appendChild(row);
                 updateRemoveButtons();
