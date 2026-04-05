@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@WebServlet("/recommendations")
+@WebServlet({"/recommendations", "/dish-recommendations"})
 public class DishRecommendationServlet extends BaseServlet {
 
     /** gets recommended dishes for expiring ingredients */
