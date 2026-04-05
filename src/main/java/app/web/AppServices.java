@@ -16,6 +16,7 @@ public record AppServices(
         ShoppingListService shoppingListService,
         DishRecommendationService dishRecommendationService,
         WasteImpactService wasteImpactService,
+        NavigationAssistantService navigationAssistantService,
         InMemoryNotificationStore notificationStore
 ) {
 }
