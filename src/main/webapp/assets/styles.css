@@ -30,6 +30,7 @@
     --shadow-base: 0 6px 18px -12px rgba(15, 23, 42, 0.3);
 }
 
+
 /* ─── RESET & BASE ───────────────────────────────────── */
 *, *::before, *::after {
     box-sizing: border-box;
@@ -724,3 +725,36 @@ tbody tr:hover {
         padding: 1rem 0.75rem 1.2rem;
     }
 }
+
+/* When nav is absent (login/register pages), main fills full width */
+.no-nav main {
+    grid-column: 1 / -1;
+}
+
+.auth-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+}
+
+.auth-card {
+    display: block;
+    min-height: auto;
+}
+
+.auth-card h2 {
+    font-family: "Cambria", "Times New Roman", serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.6rem;
+}
+
+.auth-subtext {
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--ink-2);
+    margin-bottom: 1rem;
+}
+
+

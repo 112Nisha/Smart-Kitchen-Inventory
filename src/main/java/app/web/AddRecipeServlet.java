@@ -19,7 +19,11 @@ public class AddRecipeServlet extends BaseServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        String tenant = tenantOrDefault(req.getParameter("tenant"));
+        String tenant = loggedInTenant(req);
+        if (tenant == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
+            return;
+        }
         req.setAttribute("tenant", tenant);
         req.setAttribute("successMessage", req.getParameter("success"));
         req.setAttribute("errorMessage", req.getParameter("error"));
@@ -31,7 +35,11 @@ public class AddRecipeServlet extends BaseServlet {
     /** handles POST requests to add a new recipe */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String tenant = tenantOrDefault(req.getParameter("tenant"));
+        String tenant = loggedInTenant(req);
+        if (tenant == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
+            return;
+        }
 
         try {
             String name = req.getParameter("recipeName") == null ? "" : req.getParameter("recipeName").trim();

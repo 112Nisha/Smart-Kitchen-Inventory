@@ -33,6 +33,17 @@ public class DatabaseInitializer {
     }
 
     private static void createTables() {
+
+        String createUsersTable = """
+                                    CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL UNIQUE,
+                    password TEXT NOT NULL,
+                    restaurant_id INTEGER NOT NULL UNIQUE,
+                    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
+                );
+                                """;
+
         String createRecipesTable = """
                 CREATE TABLE IF NOT EXISTS dish_recipes (
                     restaurant_id INTEGER NOT NULL,
@@ -70,6 +81,7 @@ public class DatabaseInitializer {
 
             stmt.execute("PRAGMA foreign_keys = ON;");
             stmt.execute(createRestaurantsTable);
+            stmt.execute(createUsersTable);
             stmt.execute(createRecipesTable);
             stmt.execute(createIngredientsTable);
 

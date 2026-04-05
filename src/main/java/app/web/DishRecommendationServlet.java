@@ -25,7 +25,11 @@ public class DishRecommendationServlet extends BaseServlet {
         resp.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
         resp.setHeader("Pragma", "no-cache");
 
-        String tenant = tenantOrDefault(req.getParameter("tenant"));
+        String tenant = loggedInTenant(req);
+        if (tenant == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
+            return;
+        }
 
         List<DishRecommendationService.DishSuggestion> recommendations =
             services().dishRecommendationService().suggestDishesByExpiryPriority(tenant);
@@ -47,7 +51,11 @@ public class DishRecommendationServlet extends BaseServlet {
     /** handles POST requests to log cooked dishes and show near-expiry usage summary */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String tenant = tenantOrDefault(req.getParameter("tenant"));
+        String tenant = loggedInTenant(req);
+        if (tenant == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
+            return;
+        }
         String dish = req.getParameter("dishName") == null ? "" : req.getParameter("dishName").trim();
 
         try {

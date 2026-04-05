@@ -19,7 +19,11 @@ import java.util.List;
 public class ShoppingListServlet extends BaseServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String tenantId = tenantOrDefault(req.getParameter("tenant"));
+        String tenantId = loggedInTenant(req);
+        if (tenantId == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
+            return;
+        }
         List<Ingredient> items = services().shoppingListService().generateShoppingList(tenantId);
         req.setAttribute("tenant", tenantId);
         req.setAttribute("items", items);

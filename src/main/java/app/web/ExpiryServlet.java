@@ -19,7 +19,11 @@ import java.util.List;
 public class ExpiryServlet extends BaseServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String tenantId = tenantOrDefault(req.getParameter("tenant"));
+        String tenantId = loggedInTenant(req);
+        if (tenantId == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
+            return;
+        }
         List<ExpiryAlertContext> alerts = services().expiryAlertService().evaluateAndNotify(tenantId);
         req.setAttribute("tenant", tenantId);
         req.setAttribute("alerts", alerts);
