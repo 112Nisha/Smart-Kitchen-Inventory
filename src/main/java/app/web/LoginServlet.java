@@ -20,14 +20,14 @@ public class LoginServlet extends BaseServlet {
         String password = req.getParameter("password") == null ? "" : req.getParameter("password").trim();
 
         if (username.isBlank() || password.isBlank()) {
-            resp.sendRedirect(req.getContextPath() + "/auth?error=Please enter username and password.");
+            resp.sendRedirect(req.getContextPath() + "/auth?loginError=Invalid username or password.");
             return;
         }
 
         Optional<UserRepository.LoginResult> loginResult = userRepository.login(username, password);
 
         if (loginResult.isEmpty()) {
-            resp.sendRedirect(req.getContextPath() + "/auth?error=Invalid username or password.");
+            resp.sendRedirect(req.getContextPath() + "/auth?loginError=Invalid username or password.");
             return;
         }
 

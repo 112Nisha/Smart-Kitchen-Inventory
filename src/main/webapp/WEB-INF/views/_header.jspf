@@ -22,7 +22,7 @@
             <p>
                 Logged in as <strong><c:out value="${sessionScope.username}" /></strong>
                 |
-                <a href="${pageContext.request.contextPath}/logout">Logout</a>
+                <a href="${pageContext.request.contextPath}/logout" class="logout-link">Logout</a>
             </p>
         </c:if>
     </header>
