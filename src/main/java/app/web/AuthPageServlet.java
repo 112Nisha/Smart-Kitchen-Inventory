@@ -5,7 +5,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
 
-@WebServlet({"/", "/auth"})
+@WebServlet("/auth")
 public class AuthPageServlet extends BaseServlet {
 
     /** handles GET requests for the authentication page */
