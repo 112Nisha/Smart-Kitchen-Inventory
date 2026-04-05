@@ -18,11 +18,13 @@ public class ManageRecipesServlet extends BaseServlet {
             throws ServletException, IOException {
 
         String tenant = tenantOrDefault(req.getParameter("tenant"));
-        List<DishRecipe> allRecipes = services().dishRecommendationService().getAllRecipes();
+
+        List<DishRecipe> allRecipes = services().dishRecommendationService().getAllRecipes(tenant);
 
         req.setAttribute("tenant", tenant);
         req.setAttribute("allRecipes", allRecipes);
         req.setAttribute("successMessage", req.getParameter("success"));
+        req.setAttribute("errorMessage", req.getParameter("error"));
 
         req.getRequestDispatcher("/WEB-INF/views/manage-recipes.jsp")
                 .forward(req, resp);
@@ -37,13 +39,16 @@ public class ManageRecipesServlet extends BaseServlet {
         if (recipeIdStr != null && !recipeIdStr.isBlank()) {
             try {
                 Long recipeId = Long.parseLong(recipeIdStr);
-                services().dishRecommendationService().deleteRecipe(recipeId);
-            } catch (NumberFormatException ignored) {
+                services().dishRecommendationService().deleteRecipe(tenant, recipeId);
+                resp.sendRedirect(req.getContextPath()
+                + "/recipes/manage?tenant=" + encodeQueryParam(tenant)
+                + "&success=" + encodeQueryParam("Recipe deleted successfully."));
+            } catch (Exception e) {
+                resp.sendRedirect(req.getContextPath()
+                        + "/recipes/manage?tenant=" + encodeQueryParam(tenant)
+                        + "&error=" + encodeQueryParam("Failed to delete recipe."));
             }
         }
 
-        resp.sendRedirect(req.getContextPath()
-                + "/recipes/manage?tenant=" + encodeQueryParam(tenant)
-                + "&success=" + encodeQueryParam("Recipe deleted successfully."));
     }
 }

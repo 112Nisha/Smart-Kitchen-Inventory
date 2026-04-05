@@ -22,10 +22,10 @@ class DishRecommendationFlowTest {
         InventoryManager.resetInstanceForTests();
         IngredientRepository ingredientRepository = new IngredientRepository();
         InventoryManager inventoryManager = InventoryManager.getInstance(ingredientRepository, 3);
-        DishRecommendationService recommendationService =
-                new DishRecommendationService(inventoryManager, new DishRepository());
+        DishRecommendationService recommendationService = new DishRecommendationService(inventoryManager,
+                new DishRepository());
 
-        String tenant = "tenant-dish-flow";
+        String tenant = "restaurant-a";
 
         inventoryManager.addIngredient(new Ingredient(tenant, "Tomato", 0.3, "kg", LocalDate.now().plusDays(2), 0.1));
         inventoryManager.addIngredient(new Ingredient(tenant, "Basil", 0.05, "kg", LocalDate.now().plusDays(2), 0.01));
@@ -47,15 +47,15 @@ class DishRecommendationFlowTest {
         assertFalse(afterCook.stream().anyMatch(dish -> dish.getName().equalsIgnoreCase("Tomato Basil Pasta")));
     }
 
-        @Test
-        void suggestionsPrioritizeDishesWithMoreExpiringIngredients() {
+    @Test
+    void suggestionsPrioritizeDishesWithMoreExpiringIngredients() {
         InventoryManager.resetInstanceForTests();
         IngredientRepository ingredientRepository = new IngredientRepository();
         InventoryManager inventoryManager = InventoryManager.getInstance(ingredientRepository, 3);
-        DishRecommendationService recommendationService =
-            new DishRecommendationService(inventoryManager, new DishRepository());
+        DishRecommendationService recommendationService = new DishRecommendationService(inventoryManager,
+                new DishRepository());
 
-        String tenant = "tenant-dish-ranking";
+        String tenant = "restaurant-a";
 
         inventoryManager.addIngredient(new Ingredient(tenant, "Tomato", 1.0, "kg", LocalDate.now().plusDays(1), 0.2));
         inventoryManager.addIngredient(new Ingredient(tenant, "Basil", 1.0, "kg", LocalDate.now().plusDays(1), 0.2));
@@ -63,26 +63,32 @@ class DishRecommendationFlowTest {
         inventoryManager.addIngredient(new Ingredient(tenant, "Pasta", 1.0, "kg", LocalDate.now().plusDays(1), 0.2));
 
         inventoryManager.addIngredient(new Ingredient(tenant, "Onion", 1.0, "kg", LocalDate.now().plusDays(6), 0.2));
-        inventoryManager.addIngredient(new Ingredient(tenant, "Olive Oil", 1.0, "liters", LocalDate.now().plusDays(6), 0.2));
+        inventoryManager
+                .addIngredient(new Ingredient(tenant, "Olive Oil", 1.0, "liters", LocalDate.now().plusDays(6), 0.2));
+        inventoryManager
+                .addIngredient(new Ingredient(tenant, "Bell Pepper", 1.0, "kg", LocalDate.now().plusDays(6), 0.2));
+        inventoryManager.addIngredient(new Ingredient(tenant, "Carrot", 1.0, "kg", LocalDate.now().plusDays(6), 0.2));
+        inventoryManager
+                .addIngredient(new Ingredient(tenant, "Soy Sauce", 1.0, "liters", LocalDate.now().plusDays(6), 0.2));
 
-        List<DishRecommendationService.DishSuggestion> ranked =
-            recommendationService.suggestDishesByExpiryPriority(tenant);
+        List<DishRecommendationService.DishSuggestion> ranked = recommendationService
+                .suggestDishesByExpiryPriority(tenant);
 
         int pastaIndex = indexOfDish(ranked, "Tomato Basil Pasta");
-        int sauteIndex = indexOfDish(ranked, "Onion Garlic Saute");
+        int stirFryIndex = indexOfDish(ranked, "Veggie Stir Fry");
 
         assertTrue(pastaIndex >= 0);
-        assertTrue(sauteIndex >= 0);
-        assertTrue(pastaIndex < sauteIndex);
+        assertTrue(stirFryIndex >= 0);
+        assertTrue(pastaIndex < stirFryIndex);
 
         DishRecommendationService.DishSuggestion pastaSuggestion = ranked.get(pastaIndex);
-        DishRecommendationService.DishSuggestion sauteSuggestion = ranked.get(sauteIndex);
+        DishRecommendationService.DishSuggestion stirFrySuggestion = ranked.get(stirFryIndex);
 
-        assertTrue(pastaSuggestion.getExpiryRescueScore() > sauteSuggestion.getExpiryRescueScore());
+        assertTrue(pastaSuggestion.getExpiryRescueScore() > stirFrySuggestion.getExpiryRescueScore());
         assertTrue(pastaSuggestion.getIngredients().stream()
-            .anyMatch(ingredient -> ingredient.isExpiringSoon()
-                && ingredient.getExpiryHint().toLowerCase().contains("try to use")));
-        }
+                .anyMatch(ingredient -> ingredient.isExpiringSoon()
+                        && ingredient.getExpiryHint().toLowerCase().contains("try to use")));
+    }
 
     private double quantityOf(List<Ingredient> inventory, String ingredientName, String unit) {
         return inventory.stream()

@@ -22,6 +22,7 @@ public class AddRecipeServlet extends BaseServlet {
         String tenant = tenantOrDefault(req.getParameter("tenant"));
         req.setAttribute("tenant", tenant);
         req.setAttribute("successMessage", req.getParameter("success"));
+        req.setAttribute("errorMessage", req.getParameter("error"));
 
         req.getRequestDispatcher("/WEB-INF/views/add-recipe.jsp")
                 .forward(req, resp);
@@ -32,40 +33,54 @@ public class AddRecipeServlet extends BaseServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String tenant = tenantOrDefault(req.getParameter("tenant"));
 
-        String name = req.getParameter("recipeName") == null ? "" : req.getParameter("recipeName").trim();
-        String instructions = req.getParameter("instructions") == null ? "" : req.getParameter("instructions").trim();
+        try {
+            String name = req.getParameter("recipeName") == null ? "" : req.getParameter("recipeName").trim();
+            String instructions = req.getParameter("instructions") == null ? ""
+                    : req.getParameter("instructions").trim();
 
-        String[] ingredientNames = req.getParameterValues("ingredientName");
-        String[] ingredientQuantities = req.getParameterValues("ingredientQuantity");
-        String[] ingredientUnits = req.getParameterValues("ingredientUnit");
+            String[] ingredientNames = req.getParameterValues("ingredientName");
+            String[] ingredientQuantities = req.getParameterValues("ingredientQuantity");
+            String[] ingredientUnits = req.getParameterValues("ingredientUnit");
 
-        List<RecipeIngredient> ingredients = new ArrayList<>();
+            List<RecipeIngredient> ingredients = new ArrayList<>();
 
-        if (ingredientNames != null && ingredientQuantities != null && ingredientUnits != null) {
-            for (int i = 0; i < ingredientNames.length; i++) {
-                String ingredientName = ingredientNames[i] == null ? "" : ingredientNames[i].trim();
-                String quantityStr = ingredientQuantities[i] == null ? "" : ingredientQuantities[i].trim();
-                String unit = ingredientUnits[i] == null ? "" : ingredientUnits[i].trim();
+            if (ingredientNames != null && ingredientQuantities != null && ingredientUnits != null) {
+                for (int i = 0; i < ingredientNames.length; i++) {
+                    String ingredientName = ingredientNames[i] == null ? "" : ingredientNames[i].trim();
+                    String quantityStr = ingredientQuantities[i] == null ? "" : ingredientQuantities[i].trim();
+                    String unit = ingredientUnits[i] == null ? "" : ingredientUnits[i].trim();
 
-                if (ingredientName.isBlank() || quantityStr.isBlank() || unit.isBlank()) {
-                    continue;
-                }
+                    if (ingredientName.isBlank() || quantityStr.isBlank() || unit.isBlank()) {
+                        continue;
+                    }
 
-                try {
-                    double quantity = Double.parseDouble(quantityStr);
-                    ingredients.add(new RecipeIngredient(ingredientName, quantity, unit));
-                } catch (NumberFormatException ignored) {
+                    try {
+                        double quantity = Double.parseDouble(quantityStr);
+                        ingredients.add(new RecipeIngredient(ingredientName, quantity, unit));
+                    } catch (NumberFormatException ignored) {
+                    }
                 }
             }
-        }
 
-        if (!name.isBlank() && !instructions.isBlank() && !ingredients.isEmpty()) {
-            DishRecipe recipe = new DishRecipe(name, ingredients, instructions);
-            services().dishRecommendationService().addRecipe(recipe);
-        }
+            if (name.isBlank() || instructions.isBlank() || ingredients.isEmpty()) {
+                resp.sendRedirect(req.getContextPath()
+                        + "/recipes/add?tenant=" + encodeQueryParam(tenant)
+                        + "&error=" + encodeQueryParam("Please fill in all recipe details."));
+                return;
+            }
 
-        resp.sendRedirect(req.getContextPath()
-                + "/recipes/add?tenant=" + encodeQueryParam(tenant)
-                + "&success=" + encodeQueryParam("Recipe added successfully."));
+            DishRecipe recipe = new DishRecipe(null, name, ingredients, instructions);
+            services().dishRecommendationService().addRecipe(tenant, recipe);
+            resp.sendRedirect(req.getContextPath()
+                    + "/recipes/add?tenant=" + encodeQueryParam(tenant)
+                    + "&success=" + encodeQueryParam("Recipe added successfully."));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            resp.sendRedirect(req.getContextPath()
+                    + "/recipes/add?tenant=" + encodeQueryParam(tenant)
+                    + "&error=" + encodeQueryParam("Failed to add recipe."));
+        }
     }
 }

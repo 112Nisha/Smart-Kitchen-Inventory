@@ -43,6 +43,7 @@ public class DishRecommendationService {
         public List<DishSuggestion> suggestDishesByExpiryPriority(String tenantId) {
 
                 List<Ingredient> inventory = inventoryManager.listIngredients(tenantId);
+                Long restaurantId = getRestaurantIdFromTenant(tenantId);
                 Map<String, List<Ingredient>> inventoryMap = inventory.stream()
                                 .filter(ingredient -> ingredient.getState().canRecommendInDish())
                                 .filter(ingredient -> ingredient.getQuantity() > 1e-9)
@@ -50,7 +51,7 @@ public class DishRecommendationService {
                                                 ingredient -> ingredient.getName().toLowerCase(Locale.ROOT)));
 
                 LocalDate today = LocalDate.now();
-                List<DishSuggestion> suggestions = dishRepository.findAll().stream()
+                List<DishSuggestion> suggestions = dishRepository.findAll(restaurantId).stream()
                                 .map(dish -> buildDishSuggestion(dish, inventoryMap, today))
                                 .filter(Optional::isPresent)
                                 .map(Optional::get)
@@ -222,11 +223,13 @@ public class DishRecommendationService {
          * specific dish
          */
         public double estimatedSavedIngredientQuantity(String tenantId, String dishName) {
+                Long restaurantId = getRestaurantIdFromTenant(tenantId);
+
                 List<Ingredient> nearExpiry = inventoryManager.listIngredients(tenantId).stream()
                                 .filter(ingredient -> ingredient.getState().canRecommendInDish())
                                 .toList();
 
-                return dishRepository.findAll().stream()
+                return dishRepository.findAll(restaurantId).stream()
                                 .filter(dish -> dish.getName().equalsIgnoreCase(dishName))
                                 .findFirst()
                                 .map(dish -> dish.getIngredients().stream()
@@ -243,7 +246,8 @@ public class DishRecommendationService {
                          * and returns unit totals plus rescued near-expiry ingredient details.
                          */
                         public CookDishResult logDishAsCooked(String tenantId, String dishName) {
-                                DishRecipe dish = dishRepository.findAll().stream()
+                                Long restaurantId = getRestaurantIdFromTenant(tenantId);
+                                DishRecipe dish = dishRepository.findAll(restaurantId).stream()
                                                 .filter(candidate -> candidate.getName().equalsIgnoreCase(dishName))
                                                 .findFirst()
                                                 .orElseThrow(() -> new IllegalArgumentException("Dish not found: " + dishName));
@@ -369,16 +373,19 @@ public class DishRecommendationService {
                                 };
                         }
 
-        public List<DishRecipe> getAllRecipes() {
-                return dishRepository.findAll();
+        public List<DishRecipe> getAllRecipes(String tenantId) {
+                Long restaurantId = getRestaurantIdFromTenant(tenantId);
+                return dishRepository.findAll(restaurantId);
         }
 
-        public void addRecipe(DishRecipe recipe) {
-                dishRepository.save(recipe);
+        public void addRecipe(String tenantId, DishRecipe recipe) {
+                Long restaurantId = getRestaurantIdFromTenant(tenantId);
+                dishRepository.save(recipe, restaurantId);
         }
 
-        public void deleteRecipe(Long recipeId) {
-                dishRepository.deleteById(recipeId);
+        public void deleteRecipe(String tenantId, Long recipeId) {
+                Long restaurantId = getRestaurantIdFromTenant(tenantId);
+                dishRepository.deleteById(recipeId, restaurantId);
         }
 
         public static final class DishSuggestion {
@@ -483,5 +490,28 @@ public class DishRecommendationService {
                         boolean weightUnit,
                         boolean nearExpiry
         ) {
+        }
+
+        /** gets the restaurant id when given the restaurant name as tenant ID */
+        private Long getRestaurantIdFromTenant(String tenantId) {
+                String sql = "SELECT id FROM restaurants WHERE name = ?";
+
+                try (java.sql.Connection conn = java.sql.DriverManager
+                                .getConnection(app.config.DatabaseInitializer.getUrl());
+                                java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                        stmt.setString(1, tenantId);
+
+                        try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                                if (rs.next()) {
+                                        return rs.getLong("id");
+                                }
+                        }
+
+                } catch (java.sql.SQLException e) {
+                        throw new RuntimeException("Failed to find restaurant ID for tenant: " + tenantId, e);
+                }
+
+                throw new IllegalArgumentException("Unknown tenant: " + tenantId);
         }
 }

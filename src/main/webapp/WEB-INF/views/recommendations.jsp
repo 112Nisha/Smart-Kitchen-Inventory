@@ -69,11 +69,11 @@
     <h2>Suggested Dishes for Near-Expiry Ingredients</h2>
 
     <p style="margin-bottom: 16px;">
-        <a href="${pageContext.request.contextPath}/recipes/add?tenantId=${tenantId}">
+        <a href="${pageContext.request.contextPath}/recipes/add?tenant=${tenant}">
             <button type="button">Add New Recipe</button>
         </a>
 
-        <a href="${pageContext.request.contextPath}/recipes/manage?tenantId=${tenantId}" style="margin-left: 10px;">
+        <a href="${pageContext.request.contextPath}/recipes/manage?tenant=${tenant}" style="margin-left: 10px;">
             <button type="button">Manage / Delete Recipes</button>
         </a>
     </p>
