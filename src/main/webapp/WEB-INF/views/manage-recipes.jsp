@@ -14,7 +14,7 @@
         </c:if>
 
         <section class="card">
-            <h2>Manage Recipes</h2>
+            <h2>Manage Dishes</h2>
 
             <p>
                 <a href="${pageContext.request.contextPath}/recommendations?tenant=${tenant}">
@@ -24,7 +24,7 @@
 
             <c:choose>
                 <c:when test="${empty allRecipes}">
-                    <p>No recipes available.</p>
+                    <p>No dishes available.</p>
                 </c:when>
 
                 <c:otherwise>
@@ -62,7 +62,7 @@
 
                                     <td>
                                         <form method="post" action="${pageContext.request.contextPath}/recipes/manage"
-                                            onsubmit="return confirm('Delete this recipe?');">
+                                            onsubmit="return confirm('Delete this dish?');">
                                             <input type="hidden" name="tenant" value="${tenant}">
                                             <input type="hidden" name="recipeId" value="${dish.id}">
                                             <button type="submit">Delete</button>
