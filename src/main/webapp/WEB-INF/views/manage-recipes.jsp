@@ -1,5 +1,5 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-    <%@ include file="_header.jspf" %>
+<%@ include file="_header.jspf" %>
 
         <c:if test="${not empty errorMessage}">
             <p class="error">
@@ -34,7 +34,7 @@
                                 <th>Dish</th>
                                 <th>Ingredients</th>
                                 <th>Instructions</th>
-                                <th>Delete</th>
+                                <th>Manage</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -61,12 +61,22 @@
                                     </td>
 
                                     <td>
-                                        <form method="post" action="${pageContext.request.contextPath}/recipes/manage"
-                                            onsubmit="return confirm('Delete this dish?');">
-                                            <input type="hidden" name="tenant" value="${tenant}">
-                                            <input type="hidden" name="recipeId" value="${dish.id}">
-                                            <button type="submit">Delete</button>
-                                        </form>
+                                        <div style="display: flex; gap: 8px; align-items: center;">
+                                            <form method="post"
+                                                action="${pageContext.request.contextPath}/recipes/manage"
+                                                onsubmit="return confirm('Delete this dish?');" style="margin: 0;">
+                                                <input type="hidden" name="tenant" value="${tenant}">
+                                                <input type="hidden" name="recipeId" value="${dish.id}">
+                                                <button type="submit">Delete</button>
+                                            </form>
+
+                                            <form method="get" action="${pageContext.request.contextPath}/recipes/edit"
+                                                style="margin: 0;">
+                                                <input type="hidden" name="tenant" value="${tenant}">
+                                                <input type="hidden" name="id" value="${dish.id}">
+                                                <button type="submit">Edit</button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             </c:forEach>
