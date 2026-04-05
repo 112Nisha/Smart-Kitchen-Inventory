@@ -14,7 +14,9 @@ public class InventoryServlet extends BaseServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String tenantId = tenantOrDefault(req.getParameter("tenant"));
-        List<Ingredient> ingredients = services().inventoryManager().listIngredients(tenantId);
+        List<Ingredient> ingredients = services().inventoryManager().listIngredients(tenantId).stream()
+            .filter(ingredient -> ingredient.getQuantity() > 1e-9)
+            .toList();
         req.setAttribute("tenant", tenantId);
         req.setAttribute("ingredients", ingredients);
         req.getRequestDispatcher("/WEB-INF/views/inventory.jsp").forward(req, resp);
