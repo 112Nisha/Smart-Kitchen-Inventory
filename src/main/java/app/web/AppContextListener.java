@@ -45,6 +45,7 @@ public class AppContextListener implements ServletContextListener {
         ShoppingListService shoppingListService = new ShoppingListService(inventoryManager);
         DishRecommendationService recommendationService = new DishRecommendationService(inventoryManager, new DishRepository());
         WasteImpactService wasteImpactService = new WasteImpactService();
+        NavigationAssistantService navigationAssistantService = new NavigationAssistantService();
 
         AppServices appServices = new AppServices(
                 inventoryManager,
@@ -52,6 +53,7 @@ public class AppContextListener implements ServletContextListener {
                 shoppingListService,
                 recommendationService,
                 wasteImpactService,
+            navigationAssistantService,
                 notificationStore
         );
 

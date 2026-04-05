@@ -1,4 +1,198 @@
     </main>
+
+    <section class="assistant-widget" data-context-path="${pageContext.request.contextPath}" data-tenant="${tenant}">
+        <button type="button" class="assistant-toggle" aria-expanded="false" aria-controls="assistant-panel">
+            Need Help?
+        </button>
+
+        <div id="assistant-panel" class="assistant-panel" hidden>
+            <div class="assistant-panel-header">
+                <h3>Navigation Guide</h3>
+                <p>Ask what you want to do, and get fast steps.</p>
+            </div>
+
+            <form class="assistant-form" autocomplete="off">
+                <label for="assistant-question">Your question</label>
+                <input
+                        id="assistant-question"
+                        class="assistant-input"
+                        type="text"
+                        maxlength="220"
+                        placeholder="I want to add a new item. How do I do that?"
+                        required>
+                <button type="submit" class="assistant-submit">Ask Guide</button>
+            </form>
+
+            <div class="assistant-suggestion-row" aria-label="Quick prompts">
+                <button type="button" class="assistant-suggestion" data-suggestion="I want to add a new item. How do I do that?">Add new item</button>
+                <button type="button" class="assistant-suggestion" data-suggestion="How do I switch restaurant tenant?">Switch tenant</button>
+                <button type="button" class="assistant-suggestion" data-suggestion="How do I log a dish as cooked?">Log dish cooked</button>
+            </div>
+
+            <article class="assistant-response" hidden>
+                <p class="assistant-short-answer" aria-live="polite"></p>
+
+                <h4>Steps</h4>
+                <ol class="assistant-steps"></ol>
+
+                <h4>One-click actions</h4>
+                <div class="assistant-actions"></div>
+
+                <section class="assistant-tips-wrap" hidden>
+                    <h4>Quick tips</h4>
+                    <ul class="assistant-tips"></ul>
+                </section>
+            </article>
+
+            <p class="assistant-error" hidden></p>
+        </div>
+    </section>
 </div>
+
+<script>
+(() => {
+    const widget = document.querySelector(".assistant-widget");
+    if (!widget) {
+        return;
+    }
+
+    const contextPath = widget.dataset.contextPath || "";
+    const tenant = (widget.dataset.tenant || "restaurant-a").trim() || "restaurant-a";
+
+    const toggleButton = widget.querySelector(".assistant-toggle");
+    const panel = widget.querySelector(".assistant-panel");
+    const form = widget.querySelector(".assistant-form");
+    const input = widget.querySelector(".assistant-input");
+    const submitButton = widget.querySelector(".assistant-submit");
+    const responseBox = widget.querySelector(".assistant-response");
+    const shortAnswerNode = widget.querySelector(".assistant-short-answer");
+    const stepsNode = widget.querySelector(".assistant-steps");
+    const actionsNode = widget.querySelector(".assistant-actions");
+    const tipsWrap = widget.querySelector(".assistant-tips-wrap");
+    const tipsNode = widget.querySelector(".assistant-tips");
+    const errorNode = widget.querySelector(".assistant-error");
+    const suggestionButtons = widget.querySelectorAll(".assistant-suggestion");
+
+    function setOpen(nextOpen) {
+        panel.hidden = !nextOpen;
+        toggleButton.setAttribute("aria-expanded", String(nextOpen));
+        if (nextOpen) {
+            input.focus();
+        }
+    }
+
+    function toAppUrl(url) {
+        if (!url || typeof url !== "string") {
+            return contextPath + "/dashboard?tenant=" + encodeURIComponent(tenant);
+        }
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return url;
+        }
+        if (url.startsWith("/")) {
+            return contextPath + url;
+        }
+        return contextPath + "/" + url;
+    }
+
+    function renderList(parent, values, tagName) {
+        parent.innerHTML = "";
+        values.forEach((value) => {
+            const item = document.createElement(tagName);
+            item.textContent = value;
+            parent.appendChild(item);
+        });
+    }
+
+    function renderActions(actions) {
+        actionsNode.innerHTML = "";
+        actions.forEach((action) => {
+            const link = document.createElement("a");
+            link.className = "assistant-action-link";
+            link.href = toAppUrl(action.url);
+            link.textContent = action.label;
+            actionsNode.appendChild(link);
+        });
+    }
+
+    async function askGuide(message) {
+        const body = new URLSearchParams();
+        body.set("tenant", tenant);
+        body.set("message", message);
+
+        const response = await fetch(contextPath + "/assistant/navigation", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+            },
+            body: body.toString()
+        });
+
+        if (!response.ok) {
+            throw new Error("assistant request failed");
+        }
+
+        return response.json();
+    }
+
+    toggleButton.addEventListener("click", () => {
+        setOpen(panel.hidden);
+    });
+
+    suggestionButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            input.value = button.dataset.suggestion || "";
+            form.requestSubmit();
+        });
+    });
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const question = input.value.trim();
+        if (!question) {
+            return;
+        }
+
+        setOpen(true);
+        responseBox.hidden = true;
+        errorNode.hidden = true;
+
+        const previousLabel = submitButton.textContent;
+        submitButton.disabled = true;
+        submitButton.textContent = "Thinking...";
+
+        try {
+            const payload = await askGuide(question);
+
+            shortAnswerNode.textContent = payload.shortAnswer || "Here is how to proceed.";
+
+            const steps = Array.isArray(payload.steps) ? payload.steps.filter(Boolean) : [];
+            renderList(stepsNode, steps, "li");
+
+            const actions = Array.isArray(payload.actions)
+                ? payload.actions.filter((item) => item && item.label && item.url)
+                : [];
+            renderActions(actions);
+
+            const tips = Array.isArray(payload.quickTips) ? payload.quickTips.filter(Boolean) : [];
+            if (tips.length > 0) {
+                renderList(tipsNode, tips, "li");
+                tipsWrap.hidden = false;
+            } else {
+                tipsWrap.hidden = true;
+                tipsNode.innerHTML = "";
+            }
+
+            responseBox.hidden = false;
+        } catch (error) {
+            errorNode.textContent = "Guide is unavailable right now. Please try again.";
+            errorNode.hidden = false;
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = previousLabel;
+        }
+    });
+})();
+</script>
 </body>
 </html>

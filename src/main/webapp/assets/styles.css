@@ -484,6 +484,148 @@ tbody tr:hover {
     line-height: 1.5;
 }
 
+/* ─── NAVIGATION ASSISTANT ─────────────────────────── */
+.assistant-widget {
+    position: fixed;
+    right: clamp(0.8rem, 2vw, 1.4rem);
+    bottom: clamp(0.8rem, 2vw, 1.4rem);
+    z-index: 40;
+}
+
+.assistant-toggle {
+    border-radius: 999px;
+    padding: 0.68rem 1.1rem;
+    font-size: 0.86rem;
+    font-weight: 700;
+    background: linear-gradient(180deg, #f59e0b, #d97706);
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.28);
+}
+
+.assistant-panel {
+    width: min(370px, calc(100vw - 1.6rem));
+    max-height: min(76vh, 640px);
+    overflow: auto;
+    margin-top: 0.6rem;
+    padding: 0.9rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(217, 119, 6, 0.26);
+    background: linear-gradient(180deg, rgba(255, 252, 246, 0.96), rgba(255, 255, 255, 0.98));
+    box-shadow: 0 14px 30px -22px rgba(15, 23, 42, 0.55);
+}
+
+.assistant-panel-header h3 {
+    margin: 0;
+    color: #8a4a00;
+    font-family: "Cambria", "Times New Roman", serif;
+    font-size: 1.02rem;
+}
+
+.assistant-panel-header p {
+    margin: 0.2rem 0 0.6rem;
+    color: #6b7280;
+    font-size: 0.82rem;
+}
+
+.assistant-form {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.assistant-input {
+    min-height: 2.65rem;
+}
+
+.assistant-submit {
+    width: fit-content;
+}
+
+.assistant-suggestion-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+    margin: 0.7rem 0;
+}
+
+.assistant-suggestion {
+    background: #ffffff;
+    border: 1px solid rgba(217, 119, 6, 0.28);
+    color: #9a4f00;
+    box-shadow: none;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.78rem;
+    border-radius: 999px;
+}
+
+.assistant-suggestion:hover {
+    background: rgba(245, 158, 11, 0.14);
+}
+
+.assistant-response {
+    margin-top: 0.5rem;
+    border-top: 1px solid rgba(217, 119, 6, 0.2);
+    padding-top: 0.65rem;
+}
+
+.assistant-short-answer {
+    margin: 0 0 0.55rem;
+    font-weight: 700;
+    color: #7a4a07;
+    line-height: 1.5;
+}
+
+.assistant-response h4 {
+    margin: 0.45rem 0 0.35rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #6b7280;
+}
+
+.assistant-steps,
+.assistant-tips {
+    margin: 0;
+    padding-left: 1rem;
+    display: grid;
+    gap: 0.25rem;
+    color: #334155;
+    font-size: 0.86rem;
+}
+
+.assistant-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.assistant-action-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border-radius: 0.55rem;
+    border: 1px solid rgba(217, 119, 6, 0.25);
+    color: #8a4a00;
+    background: rgba(245, 158, 11, 0.1);
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 0.45rem 0.6rem;
+}
+
+.assistant-action-link:hover {
+    background: rgba(245, 158, 11, 0.2);
+}
+
+.assistant-error {
+    margin-top: 0.45rem;
+    color: #991b1b;
+    background: rgba(220, 38, 38, 0.1);
+    border-left: 3px solid #dc2626;
+    border-radius: 0.42rem;
+    padding: 0.52rem 0.62rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
 /* ─── SCROLLBAR ──────────────────────────────────────── */
 ::-webkit-scrollbar {
     width: 8px;
@@ -553,6 +695,21 @@ tbody tr:hover {
 
     .inline input,
     .inline button {
+        width: 100%;
+    }
+
+    .assistant-widget {
+        left: 0.72rem;
+        right: 0.72rem;
+        bottom: 0.72rem;
+    }
+
+    .assistant-toggle {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .assistant-panel {
         width: 100%;
     }
 }

@@ -46,6 +46,15 @@
         <url-pattern>/shopping-list</url-pattern>
     </servlet-mapping>
 
+    <servlet>
+        <servlet-name>navigationAssistantServlet</servlet-name>
+        <servlet-class>app.web.NavigationAssistantServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>navigationAssistantServlet</servlet-name>
+        <url-pattern>/assistant/navigation</url-pattern>
+    </servlet-mapping>
+
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>
     </welcome-file-list>
