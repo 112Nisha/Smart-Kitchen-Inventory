@@ -13,27 +13,32 @@ public class DishRepository {
     public DishRepository() {
         DatabaseInitializer.initialize();
     }
-  
-    /** finds all dish recipes in the database. */
-    public List<DishRecipe> findAll() {
+
+    /** finds all dish recipes in the database for a given restaurant. */
+    public List<DishRecipe> findAll(Long restaurantId) {
         List<DishRecipe> recipes = new ArrayList<>();
 
-        String recipeSql = "SELECT id, name, instructions FROM dish_recipes ORDER BY id";
+        String recipeSql = """
+                SELECT id, name, instructions
+                FROM dish_recipes
+                WHERE restaurant_id = ?
+                ORDER BY id
+                """;
 
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
-             PreparedStatement recipeStmt = conn.prepareStatement(recipeSql);
-             ResultSet recipeRs = recipeStmt.executeQuery()) {
+             PreparedStatement recipeStmt = conn.prepareStatement(recipeSql)) {
 
             conn.createStatement().execute("PRAGMA foreign_keys = ON;");
+            recipeStmt.setLong(1, restaurantId);
 
-            while (recipeRs.next()) {
-                Long recipeId = recipeRs.getLong("id");
-                String name = recipeRs.getString("name");
-                String instructions = recipeRs.getString("instructions");
-
-                List<RecipeIngredient> ingredients = findIngredientsByRecipeId(conn, recipeId);
-
-                recipes.add(new DishRecipe(recipeId, name, ingredients, instructions));
+            try (ResultSet recipeRs = recipeStmt.executeQuery()) {
+                while (recipeRs.next()) {
+                    Long recipeId = recipeRs.getLong("id");
+                    String name = recipeRs.getString("name");
+                    String instructions = recipeRs.getString("instructions");
+                    List<RecipeIngredient> ingredients = findIngredientsByRecipeId(conn, restaurantId, recipeId);
+                    recipes.add(new DishRecipe(restaurantId, recipeId, name, ingredients, instructions));
+                }
             }
 
         } catch (SQLException e) {
@@ -43,25 +48,28 @@ public class DishRepository {
         return recipes;
     }
 
-    /** finds a dish recipe by its ID. */
-    public DishRecipe findById(Long id) {
-        String recipeSql = "SELECT id, name, instructions FROM dish_recipes WHERE id = ?";
+    /** finds a dish recipe by its ID for a given restaurant. */
+    public DishRecipe findById(Long id, Long restaurantId) {
+        String recipeSql = """
+                SELECT id, name, instructions
+                FROM dish_recipes
+                WHERE id = ? AND restaurant_id = ?
+                """;
 
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
              PreparedStatement stmt = conn.prepareStatement(recipeSql)) {
 
             conn.createStatement().execute("PRAGMA foreign_keys = ON;");
             stmt.setLong(1, id);
+            stmt.setLong(2, restaurantId);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     Long recipeId = rs.getLong("id");
                     String name = rs.getString("name");
                     String instructions = rs.getString("instructions");
-
-                    List<RecipeIngredient> ingredients = findIngredientsByRecipeId(conn, recipeId);
-
-                    return new DishRecipe(recipeId, name, ingredients, instructions);
+                    List<RecipeIngredient> ingredients = findIngredientsByRecipeId(conn, restaurantId, recipeId);
+                    return new DishRecipe(restaurantId, recipeId, name, ingredients, instructions);
                 }
             }
 
@@ -72,38 +80,45 @@ public class DishRepository {
         return null;
     }
 
-    /** saves a dish recipe to the database. */
-    public void save(DishRecipe recipe) {
-        String recipeSql = "INSERT INTO dish_recipes (name, instructions) VALUES (?, ?)";
-        String ingredientSql = "INSERT INTO recipe_ingredients (recipe_id, ingredient_name, quantity, unit) VALUES (?, ?, ?, ?)";
+    /** saves a dish recipe to the database for a given restaurant. */
+    public void save(DishRecipe recipe, Long restaurantId) {
+        String nextIdSql = "SELECT COALESCE(MAX(id), 0) + 1 FROM dish_recipes WHERE restaurant_id = ?";
+        String recipeSql = "INSERT INTO dish_recipes (restaurant_id, id, name, instructions) VALUES (?, ?, ?, ?)";
+        String ingredientSql = "INSERT INTO recipe_ingredients (restaurant_id, recipe_id, ingredient_name, quantity, unit) VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl())) {
             conn.createStatement().execute("PRAGMA foreign_keys = ON;");
             conn.setAutoCommit(false);
 
-            try (PreparedStatement recipeStmt = conn.prepareStatement(recipeSql, Statement.RETURN_GENERATED_KEYS)) {
-                recipeStmt.setString(1, recipe.getName());
-                recipeStmt.setString(2, recipe.getInstructions());
-                recipeStmt.executeUpdate();
+            try {
+                Long recipeId;
+                try (PreparedStatement nextIdStmt = conn.prepareStatement(nextIdSql)) {
+                    nextIdStmt.setLong(1, restaurantId);
 
-                Long recipeId = null;
-
-                try (ResultSet rs = recipeStmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        recipeId = rs.getLong(1);
+                    try (ResultSet rs = nextIdStmt.executeQuery()) {
+                        if (rs.next()) {
+                            recipeId = rs.getLong(1);
+                        } else {
+                            throw new SQLException("Failed to generate next recipe ID.");
+                        }
                     }
                 }
 
-                if (recipeId == null) {
-                    throw new SQLException("Failed to insert recipe.");
+                try (PreparedStatement recipeStmt = conn.prepareStatement(recipeSql)) {
+                    recipeStmt.setLong(1, restaurantId);
+                    recipeStmt.setLong(2, recipeId);
+                    recipeStmt.setString(3, recipe.getName());
+                    recipeStmt.setString(4, recipe.getInstructions());
+                    recipeStmt.executeUpdate();
                 }
 
                 try (PreparedStatement ingredientStmt = conn.prepareStatement(ingredientSql)) {
                     for (RecipeIngredient ingredient : recipe.getIngredients()) {
-                        ingredientStmt.setLong(1, recipeId);
-                        ingredientStmt.setString(2, ingredient.getName());
-                        ingredientStmt.setDouble(3, ingredient.getQuantity());
-                        ingredientStmt.setString(4, ingredient.getUnit());
+                        ingredientStmt.setLong(1, restaurantId);
+                        ingredientStmt.setLong(2, recipeId);
+                        ingredientStmt.setString(3, ingredient.getName());
+                        ingredientStmt.setDouble(4, ingredient.getQuantity());
+                        ingredientStmt.setString(5, ingredient.getUnit());
                         ingredientStmt.addBatch();
                     }
 
@@ -122,15 +137,16 @@ public class DishRepository {
         }
     }
 
-    /** deletes a dish recipe by its ID. */
-    public void deleteById(Long id) {
-        String sql = "DELETE FROM dish_recipes WHERE id = ?";
+    /** deletes a dish recipe by its ID for a given restaurant. */
+    public void deleteById(Long id, Long restaurantId) {
+        String sql = "DELETE FROM dish_recipes WHERE id = ? AND restaurant_id = ?";
 
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             conn.createStatement().execute("PRAGMA foreign_keys = ON;");
             stmt.setLong(1, id);
+            stmt.setLong(2, restaurantId);
             stmt.executeUpdate();
 
         } catch (SQLException e) {
@@ -138,19 +154,20 @@ public class DishRepository {
         }
     }
 
-    /** finds all ingredients for a given recipe ID. */
-    private List<RecipeIngredient> findIngredientsByRecipeId(Connection conn, Long recipeId) throws SQLException {
+    /** finds all ingredients for a given recipe ID and restaurant ID. */
+    private List<RecipeIngredient> findIngredientsByRecipeId(Connection conn, Long restaurantId, Long recipeId) throws SQLException {
         List<RecipeIngredient> ingredients = new ArrayList<>();
 
         String ingredientSql = """
             SELECT ingredient_name, quantity, unit
             FROM recipe_ingredients
-            WHERE recipe_id = ?
+            WHERE restaurant_id = ? AND recipe_id = ?
             ORDER BY id
             """;
 
         try (PreparedStatement stmt = conn.prepareStatement(ingredientSql)) {
-            stmt.setLong(1, recipeId);
+            stmt.setLong(1, restaurantId);
+            stmt.setLong(2, recipeId);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {

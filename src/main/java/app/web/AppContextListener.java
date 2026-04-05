@@ -70,7 +70,6 @@ public class AppContextListener implements ServletContextListener {
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Basil", 1.5, "kg", LocalDate.now().plusDays(1), 1));
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Olive Oil", 12, "liters", LocalDate.now().plusDays(2), 5));
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Garlic", 4, "kg", LocalDate.now().plusDays(8), 6));
-        inventoryManager.addIngredient(new Ingredient("restaurant-a", "Pasta", 25, "kg", LocalDate.now().plusDays(5), 7));
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Cream", 1.5, "liters", LocalDate.now().plusDays(1), 1));
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Soy Sauce", 25, "liters", LocalDate.now().plusDays(5), 7));
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Bell Pepper", 3, "kg", LocalDate.now().plusDays(4), 2));
@@ -78,12 +77,26 @@ public class AppContextListener implements ServletContextListener {
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Spinach", 2, "kg", LocalDate.now().plusDays(2), 1));
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Egg", 40, "kg", LocalDate.now().plusDays(6), 12));
         inventoryManager.addIngredient(new Ingredient("restaurant-a", "Potato", 8, "kg", LocalDate.now().plusDays(6), 3));
-        inventoryManager.addIngredient(new Ingredient("restaurant-a", "Lettuce", 2, "kg", LocalDate.now().plusDays(2), 1));
-        inventoryManager.addIngredient(new Ingredient("restaurant-a", "Orange", 15, "kg", LocalDate.now().plusDays(5), 5));
-        inventoryManager.addIngredient(new Ingredient("restaurant-a", "Lemon", 12, "kg", LocalDate.now().plusDays(5), 4));
-        inventoryManager.addIngredient(new Ingredient("restaurant-a", "Parsley", 1, "kg", LocalDate.now().plusDays(3), 0.5));
 
         inventoryManager.addIngredient(new Ingredient("restaurant-b", "Spinach", 3, "kg", LocalDate.now().plusDays(2), 4));
         inventoryManager.addIngredient(new Ingredient("restaurant-b", "Egg", 50, "kg", LocalDate.now().plusDays(6), 15));
+
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Tomato", 12, "kg", LocalDate.now().plusDays(2), 5));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Onion", 4, "kg", LocalDate.now().plusDays(8), 6));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Basil", 1.5, "kg", LocalDate.now().plusDays(1), 1));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Olive Oil", 12, "liters", LocalDate.now().plusDays(2), 5));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Garlic", 4, "kg", LocalDate.now().plusDays(8), 6));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Cream", 1.5, "liters", LocalDate.now().plusDays(1), 1));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Soy Sauce", 25, "liters", LocalDate.now().plusDays(5), 7));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Bell Pepper", 3, "kg", LocalDate.now().plusDays(4), 2));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Carrot", 3, "kg", LocalDate.now().plusDays(4), 2));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Spinach", 2, "kg", LocalDate.now().plusDays(2), 1));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Egg", 40, "kg", LocalDate.now().plusDays(6), 12));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Potato", 8, "kg", LocalDate.now().plusDays(6), 3));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Pasta", 6, "kg", LocalDate.now().plusDays(12), 4));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Butter", 2, "kg", LocalDate.now().plusDays(7), 3));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Parsley", 1, "kg", LocalDate.now().plusDays(3), 2));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Salt", 3, "kg", LocalDate.now().plusDays(30), 10));
+        inventoryManager.addIngredient(new Ingredient("restaurant-c", "Pepper", 1, "kg", LocalDate.now().plusDays(30), 8));
     }
 }
