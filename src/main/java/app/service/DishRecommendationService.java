@@ -60,7 +60,8 @@ public class DishRecommendationService {
                 suggestions.sort(
                                 Comparator.comparingDouble(DishSuggestion::getExpiryRescueScore).reversed()
                                                 .thenComparing(
-                                                                Comparator.comparingInt(DishSuggestion::getExpiringIngredientCount)
+                                                                Comparator.comparingInt(
+                                                                                DishSuggestion::getExpiringIngredientCount)
                                                                                 .reversed())
                                                 .thenComparing(
                                                                 suggestion -> suggestion.getDish().getName(),
@@ -72,8 +73,7 @@ public class DishRecommendationService {
         private Optional<DishSuggestion> buildDishSuggestion(
                         DishRecipe dish,
                         Map<String, List<Ingredient>> inventoryMap,
-                        LocalDate today
-        ) {
+                        LocalDate today) {
                 List<SuggestionIngredient> suggestionIngredients = new ArrayList<>();
 
                 double totalRequiredQuantity = 0.0;
@@ -85,8 +85,10 @@ public class DishRecommendationService {
                         String ingredientKey = recipeIngredient.getName().toLowerCase(Locale.ROOT);
                         String recipeUnit = normalizeComparableUnit(recipeIngredient.getUnit());
 
-                        List<Ingredient> matchingInventory = inventoryMap.getOrDefault(ingredientKey, List.of()).stream()
-                                        .filter(ingredient -> normalizeComparableUnit(ingredient.getUnit()).equals(recipeUnit))
+                        List<Ingredient> matchingInventory = inventoryMap.getOrDefault(ingredientKey, List.of())
+                                        .stream()
+                                        .filter(ingredient -> normalizeComparableUnit(ingredient.getUnit())
+                                                        .equals(recipeUnit))
                                         .toList();
 
                         double availableQuantity = matchingInventory.stream()
@@ -100,14 +102,14 @@ public class DishRecommendationService {
                         totalRequiredQuantity += Math.max(0, recipeIngredient.getQuantity());
 
                         double nearExpiryAvailableQuantity = matchingInventory.stream()
-                                        .filter(ingredient -> ingredient.getLifecycle() == IngredientLifecycle.NEAR_EXPIRY)
+                                        .filter(ingredient -> ingredient
+                                                        .getLifecycle() == IngredientLifecycle.NEAR_EXPIRY)
                                         .mapToDouble(Ingredient::getQuantity)
                                         .sum();
 
                         double nearExpiryUsedForIngredient = Math.min(
                                         recipeIngredient.getQuantity(),
-                                        nearExpiryAvailableQuantity
-                        );
+                                        nearExpiryAvailableQuantity);
                         boolean expiringSoon = nearExpiryUsedForIngredient > 1e-9;
 
                         String emoji = "";
@@ -118,9 +120,11 @@ public class DishRecommendationService {
                                 nearExpiryUsedQuantity += nearExpiryUsedForIngredient;
 
                                 long daysUntilExpiry = matchingInventory.stream()
-                                                .filter(ingredient -> ingredient.getLifecycle() == IngredientLifecycle.NEAR_EXPIRY)
+                                                .filter(ingredient -> ingredient
+                                                                .getLifecycle() == IngredientLifecycle.NEAR_EXPIRY)
                                                 .mapToLong(ingredient -> Math.max(0,
-                                                                ChronoUnit.DAYS.between(today, ingredient.getExpiryDate())))
+                                                                ChronoUnit.DAYS.between(today,
+                                                                                ingredient.getExpiryDate())))
                                                 .min()
                                                 .orElse(0L);
 
@@ -135,8 +139,7 @@ public class DishRecommendationService {
                                         normalizeUnitLabel(recipeIngredient.getUnit()),
                                         expiringSoon,
                                         emoji,
-                                        expiryHint
-                        ));
+                                        expiryHint));
                 }
 
                 double expiryRescueScore = calculateExpiryRescueScore(
@@ -144,15 +147,13 @@ public class DishRecommendationService {
                                 nearExpiryIngredientCount,
                                 urgencyAccumulator,
                                 totalRequiredQuantity,
-                                nearExpiryUsedQuantity
-                );
+                                nearExpiryUsedQuantity);
 
                 return Optional.of(new DishSuggestion(
                                 dish,
                                 expiryRescueScore,
                                 nearExpiryIngredientCount,
-                                List.copyOf(suggestionIngredients)
-                ));
+                                List.copyOf(suggestionIngredients)));
         }
 
         private double calculateExpiryRescueScore(
@@ -160,15 +161,15 @@ public class DishRecommendationService {
                         int nearExpiryIngredientCount,
                         double urgencyAccumulator,
                         double totalRequiredQuantity,
-                        double nearExpiryUsedQuantity
-        ) {
+                        double nearExpiryUsedQuantity) {
                 if (totalIngredientCount <= 0) {
                         return 0.0;
                 }
 
                 double nearExpiryCoverage = nearExpiryIngredientCount / (double) totalIngredientCount;
                 double urgency = nearExpiryIngredientCount == 0 ? 0.0 : urgencyAccumulator / nearExpiryIngredientCount;
-                double rescueQuantityShare = totalRequiredQuantity <= 1e-9 ? 0.0 : nearExpiryUsedQuantity / totalRequiredQuantity;
+                double rescueQuantityShare = totalRequiredQuantity <= 1e-9 ? 0.0
+                                : nearExpiryUsedQuantity / totalRequiredQuantity;
 
                 double score = 100.0 * ((COVERAGE_WEIGHT * nearExpiryCoverage)
                                 + (URGENCY_WEIGHT * urgency)
@@ -241,137 +242,137 @@ public class DishRecommendationService {
                                 .orElse(0.0);
         }
 
-                        /**
-                         * Logs a dish as cooked, consumes the required ingredient quantities,
-                         * and returns unit totals plus rescued near-expiry ingredient details.
-                         */
-                        public CookDishResult logDishAsCooked(String tenantId, String dishName) {
-                                Long restaurantId = getRestaurantIdFromTenant(tenantId);
-                                DishRecipe dish = dishRepository.findAll(restaurantId).stream()
-                                                .filter(candidate -> candidate.getName().equalsIgnoreCase(dishName))
-                                                .findFirst()
-                                                .orElseThrow(() -> new IllegalArgumentException("Dish not found: " + dishName));
+        /**
+         * Logs a dish as cooked, consumes the required ingredient quantities,
+         * and returns unit totals plus rescued near-expiry ingredient details.
+         */
+        public CookDishResult logDishAsCooked(String tenantId, String dishName) {
+                Long restaurantId = getRestaurantIdFromTenant(tenantId);
+                DishRecipe dish = dishRepository.findAll(restaurantId).stream()
+                                .filter(candidate -> candidate.getName().equalsIgnoreCase(dishName))
+                                .findFirst()
+                                .orElseThrow(() -> new IllegalArgumentException("Dish not found: " + dishName));
 
-                                List<Ingredient> inventorySnapshot = inventoryManager.listIngredients(tenantId);
-                                List<PlannedConsumption> plannedConsumptions = new ArrayList<>();
+                List<Ingredient> inventorySnapshot = inventoryManager.listIngredients(tenantId);
+                List<PlannedConsumption> plannedConsumptions = new ArrayList<>();
 
-                                double totalUsedWeightKg = 0.0;
-                                double nearExpiryUsedKg = 0.0;
-                                double nearExpiryUsedLiters = 0.0;
-                                Map<String, Double> usedByUnit = new LinkedHashMap<>();
-                                Set<String> rescuedNearExpiryIngredients = new LinkedHashSet<>();
+                double totalUsedWeightKg = 0.0;
+                double nearExpiryUsedKg = 0.0;
+                double nearExpiryUsedLiters = 0.0;
+                Map<String, Double> usedByUnit = new LinkedHashMap<>();
+                Set<String> rescuedNearExpiryIngredients = new LinkedHashSet<>();
 
-                                for (RecipeIngredient recipeIngredient : dish.getIngredients()) {
-                                        String targetName = recipeIngredient.getName().toLowerCase(Locale.ROOT);
-                                        String targetUnit = recipeIngredient.getUnit().toLowerCase(Locale.ROOT);
-                                        double requiredQuantity = recipeIngredient.getQuantity();
+                for (RecipeIngredient recipeIngredient : dish.getIngredients()) {
+                        String targetName = recipeIngredient.getName().toLowerCase(Locale.ROOT);
+                        String targetUnit = recipeIngredient.getUnit().toLowerCase(Locale.ROOT);
+                        double requiredQuantity = recipeIngredient.getQuantity();
 
-                                        List<Ingredient> candidates = inventorySnapshot.stream()
-                                                        .filter(ingredient -> ingredient.getState().canRecommendInDish())
-                                                        .filter(ingredient -> ingredient.getName().toLowerCase(Locale.ROOT).equals(targetName))
-                                                        .filter(ingredient -> ingredient.getUnit().toLowerCase(Locale.ROOT).equals(targetUnit))
-                                                        .sorted((left, right) -> left.getExpiryDate().compareTo(right.getExpiryDate()))
-                                                        .toList();
+                        List<Ingredient> candidates = inventorySnapshot.stream()
+                                        .filter(ingredient -> ingredient.getState().canRecommendInDish())
+                                        .filter(ingredient -> ingredient.getName().toLowerCase(Locale.ROOT)
+                                                        .equals(targetName))
+                                        .filter(ingredient -> ingredient.getUnit().toLowerCase(Locale.ROOT)
+                                                        .equals(targetUnit))
+                                        .sorted((left, right) -> left.getExpiryDate().compareTo(right.getExpiryDate()))
+                                        .toList();
 
-                                        double availableQuantity = candidates.stream()
-                                                        .mapToDouble(Ingredient::getQuantity)
-                                                        .sum();
+                        double availableQuantity = candidates.stream()
+                                        .mapToDouble(Ingredient::getQuantity)
+                                        .sum();
 
-                                        if (availableQuantity + 1e-9 < requiredQuantity) {
-                                                throw new IllegalStateException("Insufficient inventory for ingredient: "
-                                                                + recipeIngredient.getName() + " (required " + requiredQuantity + " "
-                                                                + recipeIngredient.getUnit() + ")");
-                                        }
+                        if (availableQuantity + 1e-9 < requiredQuantity) {
+                                throw new IllegalStateException("Insufficient inventory for ingredient: "
+                                                + recipeIngredient.getName() + " (required " + requiredQuantity + " "
+                                                + recipeIngredient.getUnit() + ")");
+                        }
 
-                                        String unitLabel = normalizeUnitLabel(recipeIngredient.getUnit());
-                                        boolean weightUnit = isWeightUnit(recipeIngredient.getUnit());
-                                        double remainingToConsume = requiredQuantity;
+                        String unitLabel = normalizeUnitLabel(recipeIngredient.getUnit());
+                        boolean weightUnit = isWeightUnit(recipeIngredient.getUnit());
+                        double remainingToConsume = requiredQuantity;
 
-                                        for (Ingredient candidate : candidates) {
-                                                if (remainingToConsume <= 1e-9) {
-                                                        break;
-                                                }
-
-                                                double consumed = Math.min(candidate.getQuantity(), remainingToConsume);
-                                                if (consumed <= 0) {
-                                                        continue;
-                                                }
-
-                                                // Reserve quantities in-memory first so validation and deduction are consistent.
-                                                candidate.setQuantity(candidate.getQuantity() - consumed);
-                                                remainingToConsume -= consumed;
-                                                plannedConsumptions.add(new PlannedConsumption(
-                                                                candidate.getId(),
-                                                                candidate.getName(),
-                                                                consumed,
-                                                                unitLabel,
-                                                                weightUnit,
-                                                                candidate.getLifecycle() == IngredientLifecycle.NEAR_EXPIRY
-                                                ));
-                                        }
-
-                                        if (remainingToConsume > 1e-9) {
-                                                throw new IllegalStateException("Insufficient inventory for ingredient: "
-                                                                + recipeIngredient.getName() + " (required " + requiredQuantity + " "
-                                                                + recipeIngredient.getUnit() + ")");
-                                        }
+                        for (Ingredient candidate : candidates) {
+                                if (remainingToConsume <= 1e-9) {
+                                        break;
                                 }
 
-                                for (PlannedConsumption plannedConsumption : plannedConsumptions) {
-                                        Optional<Ingredient> updated = inventoryManager.useIngredient(
-                                                        tenantId,
-                                                        plannedConsumption.ingredientId(),
-                                                        plannedConsumption.quantity()
-                                        );
-                                        if (updated.isEmpty()) {
-                                                throw new IllegalStateException("Ingredient disappeared during cook log: "
-                                                                + plannedConsumption.ingredientName());
-                                        }
-
-                                        usedByUnit.merge(plannedConsumption.unitLabel(), plannedConsumption.quantity(), Double::sum);
-
-                                        if (plannedConsumption.weightUnit()) {
-                                                totalUsedWeightKg += plannedConsumption.quantity();
-                                        }
-
-                                        if (plannedConsumption.nearExpiry()) {
-                                                if (plannedConsumption.unitLabel().equals("kg")) {
-                                                        nearExpiryUsedKg += plannedConsumption.quantity();
-                                                } else if (plannedConsumption.unitLabel().equals("liters")) {
-                                                        nearExpiryUsedLiters += plannedConsumption.quantity();
-                                                }
-                                                rescuedNearExpiryIngredients.add(plannedConsumption.ingredientName());
-                                        }
+                                double consumed = Math.min(candidate.getQuantity(), remainingToConsume);
+                                if (consumed <= 0) {
+                                        continue;
                                 }
 
-                                return new CookDishResult(
-                                                dish.getName(),
-                                                totalUsedWeightKg,
-                                                nearExpiryUsedKg,
-                                                nearExpiryUsedLiters,
-                                                Map.copyOf(usedByUnit),
-                                                List.copyOf(rescuedNearExpiryIngredients)
-                                );
+                                // Reserve quantities in-memory first so validation and deduction are
+                                // consistent.
+                                candidate.setQuantity(candidate.getQuantity() - consumed);
+                                remainingToConsume -= consumed;
+                                plannedConsumptions.add(new PlannedConsumption(
+                                                candidate.getId(),
+                                                candidate.getName(),
+                                                consumed,
+                                                unitLabel,
+                                                weightUnit,
+                                                candidate.getLifecycle() == IngredientLifecycle.NEAR_EXPIRY));
                         }
 
-                        private boolean isWeightUnit(String unit) {
-                                String normalizedUnit = unit == null ? "" : unit.trim().toLowerCase(Locale.ROOT);
-                                return normalizedUnit.equals("kg")
-                                                || normalizedUnit.equals("kgs")
-                                                || normalizedUnit.equals("kilogram")
-                                                || normalizedUnit.equals("kilograms")
-                                                || normalizedUnit.equals("unit")
-                                                || normalizedUnit.equals("units");
+                        if (remainingToConsume > 1e-9) {
+                                throw new IllegalStateException("Insufficient inventory for ingredient: "
+                                                + recipeIngredient.getName() + " (required " + requiredQuantity + " "
+                                                + recipeIngredient.getUnit() + ")");
+                        }
+                }
+
+                for (PlannedConsumption plannedConsumption : plannedConsumptions) {
+                        Optional<Ingredient> updated = inventoryManager.useIngredient(
+                                        tenantId,
+                                        plannedConsumption.ingredientId(),
+                                        plannedConsumption.quantity());
+                        if (updated.isEmpty()) {
+                                throw new IllegalStateException("Ingredient disappeared during cook log: "
+                                                + plannedConsumption.ingredientName());
                         }
 
-                        private String normalizeUnitLabel(String unit) {
-                                String normalizedUnit = unit == null ? "" : unit.trim().toLowerCase(Locale.ROOT);
-                                return switch (normalizedUnit) {
-                                        case "kilogram", "kilograms", "kgs", "unit", "units" -> "kg";
-                                        case "liter", "litre", "litres" -> "liters";
-                                        default -> normalizedUnit.isBlank() ? "unknown" : normalizedUnit;
-                                };
+                        usedByUnit.merge(plannedConsumption.unitLabel(), plannedConsumption.quantity(), Double::sum);
+
+                        if (plannedConsumption.weightUnit()) {
+                                totalUsedWeightKg += plannedConsumption.quantity();
                         }
+
+                        if (plannedConsumption.nearExpiry()) {
+                                if (plannedConsumption.unitLabel().equals("kg")) {
+                                        nearExpiryUsedKg += plannedConsumption.quantity();
+                                } else if (plannedConsumption.unitLabel().equals("liters")) {
+                                        nearExpiryUsedLiters += plannedConsumption.quantity();
+                                }
+                                rescuedNearExpiryIngredients.add(plannedConsumption.ingredientName());
+                        }
+                }
+
+                return new CookDishResult(
+                                dish.getName(),
+                                totalUsedWeightKg,
+                                nearExpiryUsedKg,
+                                nearExpiryUsedLiters,
+                                Map.copyOf(usedByUnit),
+                                List.copyOf(rescuedNearExpiryIngredients));
+        }
+
+        private boolean isWeightUnit(String unit) {
+                String normalizedUnit = unit == null ? "" : unit.trim().toLowerCase(Locale.ROOT);
+                return normalizedUnit.equals("kg")
+                                || normalizedUnit.equals("kgs")
+                                || normalizedUnit.equals("kilogram")
+                                || normalizedUnit.equals("kilograms")
+                                || normalizedUnit.equals("unit")
+                                || normalizedUnit.equals("units");
+        }
+
+        private String normalizeUnitLabel(String unit) {
+                String normalizedUnit = unit == null ? "" : unit.trim().toLowerCase(Locale.ROOT);
+                return switch (normalizedUnit) {
+                        case "kilogram", "kilograms", "kgs", "unit", "units" -> "kg";
+                        case "liter", "litre", "litres" -> "liters";
+                        default -> normalizedUnit.isBlank() ? "unknown" : normalizedUnit;
+                };
+        }
 
         public List<DishRecipe> getAllRecipes(String tenantId) {
                 Long restaurantId = getRestaurantIdFromTenant(tenantId);
@@ -383,9 +384,19 @@ public class DishRecommendationService {
                 dishRepository.save(recipe, restaurantId);
         }
 
+        public void updateRecipe(String tenantId, DishRecipe recipe) {
+                Long restaurantId = getRestaurantIdFromTenant(tenantId);
+                dishRepository.update(recipe, restaurantId);
+        }
+
         public void deleteRecipe(String tenantId, Long recipeId) {
                 Long restaurantId = getRestaurantIdFromTenant(tenantId);
                 dishRepository.deleteById(recipeId, restaurantId);
+        }
+
+        public DishRecipe getRecipeById(String tenantId, Long recipeId) {
+                Long restaurantId = getRestaurantIdFromTenant(tenantId);
+                return dishRepository.findById(recipeId, restaurantId);
         }
 
         public static final class DishSuggestion {
@@ -398,8 +409,7 @@ public class DishRecommendationService {
                                 DishRecipe dish,
                                 double expiryRescueScore,
                                 int expiringIngredientCount,
-                                List<SuggestionIngredient> ingredients
-                ) {
+                                List<SuggestionIngredient> ingredients) {
                         this.dish = dish;
                         this.expiryRescueScore = expiryRescueScore;
                         this.expiringIngredientCount = expiringIngredientCount;
@@ -437,8 +447,7 @@ public class DishRecommendationService {
                                 String unit,
                                 boolean expiringSoon,
                                 String emoji,
-                                String expiryHint
-                ) {
+                                String expiryHint) {
                         this.name = name;
                         this.quantity = quantity;
                         this.unit = unit;
@@ -478,8 +487,7 @@ public class DishRecommendationService {
                         double nearExpiryUsedKg,
                         double nearExpiryUsedLiters,
                         Map<String, Double> usedByUnit,
-                        List<String> rescuedNearExpiryIngredients
-        ) {
+                        List<String> rescuedNearExpiryIngredients) {
         }
 
         private record PlannedConsumption(
@@ -488,8 +496,7 @@ public class DishRecommendationService {
                         double quantity,
                         String unitLabel,
                         boolean weightUnit,
-                        boolean nearExpiry
-        ) {
+                        boolean nearExpiry) {
         }
 
         /** gets the restaurant id when given the restaurant name as tenant ID */

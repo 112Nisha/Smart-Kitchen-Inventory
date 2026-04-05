@@ -137,6 +137,68 @@ public class DishRepository {
         }
     }
 
+    /** updates a dish recipe in the database for a given restaurant. */
+    public void update(DishRecipe recipe, Long restaurantId) {
+    String updateRecipeSql = """
+            UPDATE dish_recipes
+            SET name = ?, instructions = ?
+            WHERE id = ? AND restaurant_id = ?
+            """;
+
+    String deleteIngredientsSql = """
+            DELETE FROM recipe_ingredients
+            WHERE recipe_id = ? AND restaurant_id = ?
+            """;
+
+    String insertIngredientSql = """
+            INSERT INTO recipe_ingredients (restaurant_id, recipe_id, ingredient_name, quantity, unit)
+            VALUES (?, ?, ?, ?, ?)
+            """;
+
+    try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl())) {
+        conn.createStatement().execute("PRAGMA foreign_keys = ON;");
+        conn.setAutoCommit(false);
+
+        try {
+            try (PreparedStatement recipeStmt = conn.prepareStatement(updateRecipeSql)) {
+                recipeStmt.setString(1, recipe.getName());
+                recipeStmt.setString(2, recipe.getInstructions());
+                recipeStmt.setLong(3, recipe.getId());
+                recipeStmt.setLong(4, restaurantId);
+                recipeStmt.executeUpdate();
+            }
+
+            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteIngredientsSql)) {
+                deleteStmt.setLong(1, recipe.getId());
+                deleteStmt.setLong(2, restaurantId);
+                deleteStmt.executeUpdate();
+            }
+
+            try (PreparedStatement ingredientStmt = conn.prepareStatement(insertIngredientSql)) {
+                for (RecipeIngredient ingredient : recipe.getIngredients()) {
+                    ingredientStmt.setLong(1, restaurantId);
+                    ingredientStmt.setLong(2, recipe.getId());
+                    ingredientStmt.setString(3, ingredient.getName());
+                    ingredientStmt.setDouble(4, ingredient.getQuantity());
+                    ingredientStmt.setString(5, ingredient.getUnit());
+                    ingredientStmt.addBatch();
+                }
+
+                ingredientStmt.executeBatch();
+            }
+
+            conn.commit();
+
+        } catch (SQLException e) {
+            conn.rollback();
+            throw e;
+        }
+
+    } catch (SQLException e) {
+        throw new RuntimeException("Failed to update recipe", e);
+    }
+}
+
     /** deletes a dish recipe by its ID for a given restaurant. */
     public void deleteById(Long id, Long restaurantId) {
         String sql = "DELETE FROM dish_recipes WHERE id = ? AND restaurant_id = ?";
