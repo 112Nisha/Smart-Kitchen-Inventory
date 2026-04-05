@@ -19,17 +19,17 @@ public class RegisterServlet extends BaseServlet {
         String password = req.getParameter("password") == null ? "" : req.getParameter("password").trim();
 
         if (restaurantName.isBlank() || username.isBlank() || password.isBlank()) {
-            resp.sendRedirect(req.getContextPath() + "/auth?error=Please fill in all registration fields.");
+            resp.sendRedirect(req.getContextPath() + "/auth?registerError=Please fill in all registration fields.");
             return;
         }
 
         if (userRepository.restaurantExists(restaurantName)) {
-            resp.sendRedirect(req.getContextPath() + "/auth?error=Restaurant already exists. Please log in.");
+            resp.sendRedirect(req.getContextPath() + "/auth?registerError=Restaurant already exists. Please log in.");
             return;
         }
 
         if (userRepository.usernameExists(username)) {
-            resp.sendRedirect(req.getContextPath() + "/auth?error=Username already taken.");
+            resp.sendRedirect(req.getContextPath() + "/auth?registerError=Username already exists.");
             return;
         }
 

@@ -1,52 +1,54 @@
     </main>
 
-    <section class="assistant-widget" data-context-path="${pageContext.request.contextPath}" data-tenant="${tenant}">
-        <button type="button" class="assistant-toggle" aria-expanded="false" aria-controls="assistant-panel">
-            Need Help?
-        </button>
+    <c:if test="${not empty sessionScope.tenant}">
+        <section class="assistant-widget" data-context-path="${pageContext.request.contextPath}" data-tenant="${tenant}">
+            <button type="button" class="assistant-toggle" aria-expanded="false" aria-controls="assistant-panel">
+                Need Help?
+            </button>
 
-        <div id="assistant-panel" class="assistant-panel" hidden>
-            <div class="assistant-panel-header">
-                <h3>Navigation Guide</h3>
-                <p>Ask what you want to do, and get fast steps.</p>
+            <div id="assistant-panel" class="assistant-panel" hidden>
+                <div class="assistant-panel-header">
+                    <h3>Navigation Guide</h3>
+                    <p>Ask what you want to do, and get fast steps.</p>
+                </div>
+
+                <form class="assistant-form" autocomplete="off">
+                    <label for="assistant-question">Your question</label>
+                    <input
+                            id="assistant-question"
+                            class="assistant-input"
+                            type="text"
+                            maxlength="220"
+                            placeholder="I want to add a new item. How do I do that?"
+                            required>
+                    <button type="submit" class="assistant-submit">Ask Guide</button>
+                </form>
+
+                <div class="assistant-suggestion-row" aria-label="Quick prompts">
+                    <button type="button" class="assistant-suggestion" data-suggestion="I want to add a new item. How do I do that?">Add new item</button>
+                    <button type="button" class="assistant-suggestion" data-suggestion="How do I switch restaurant tenant?">Switch tenant</button>
+                    <button type="button" class="assistant-suggestion" data-suggestion="How do I log a dish as cooked?">Log dish cooked</button>
+                </div>
+
+                <article class="assistant-response" hidden>
+                    <p class="assistant-short-answer" aria-live="polite"></p>
+
+                    <h4>Steps</h4>
+                    <ol class="assistant-steps"></ol>
+
+                    <h4>One-click actions</h4>
+                    <div class="assistant-actions"></div>
+
+                    <section class="assistant-tips-wrap" hidden>
+                        <h4>Quick tips</h4>
+                        <ul class="assistant-tips"></ul>
+                    </section>
+                </article>
+
+                <p class="assistant-error" hidden></p>
             </div>
-
-            <form class="assistant-form" autocomplete="off">
-                <label for="assistant-question">Your question</label>
-                <input
-                        id="assistant-question"
-                        class="assistant-input"
-                        type="text"
-                        maxlength="220"
-                        placeholder="I want to add a new item. How do I do that?"
-                        required>
-                <button type="submit" class="assistant-submit">Ask Guide</button>
-            </form>
-
-            <div class="assistant-suggestion-row" aria-label="Quick prompts">
-                <button type="button" class="assistant-suggestion" data-suggestion="I want to add a new item. How do I do that?">Add new item</button>
-                <button type="button" class="assistant-suggestion" data-suggestion="How do I switch restaurant tenant?">Switch tenant</button>
-                <button type="button" class="assistant-suggestion" data-suggestion="How do I log a dish as cooked?">Log dish cooked</button>
-            </div>
-
-            <article class="assistant-response" hidden>
-                <p class="assistant-short-answer" aria-live="polite"></p>
-
-                <h4>Steps</h4>
-                <ol class="assistant-steps"></ol>
-
-                <h4>One-click actions</h4>
-                <div class="assistant-actions"></div>
-
-                <section class="assistant-tips-wrap" hidden>
-                    <h4>Quick tips</h4>
-                    <ul class="assistant-tips"></ul>
-                </section>
-            </article>
-
-            <p class="assistant-error" hidden></p>
-        </div>
-    </section>
+        </section>
+    </c:if>
 </div>
 
 <script>

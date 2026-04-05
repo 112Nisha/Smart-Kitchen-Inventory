@@ -726,7 +726,6 @@ tbody tr:hover {
     }
 }
 
-/* When nav is absent (login/register pages), main fills full width */
 .no-nav main {
     grid-column: 1 / -1;
 }
@@ -744,17 +743,48 @@ tbody tr:hover {
 
 .auth-card h2 {
     font-family: "Cambria", "Times New Roman", serif;
-    font-size: 1.2rem;
+    font-size: 1.45rem;
     font-weight: 700;
     color: var(--ink);
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.01em;
 }
 
-.auth-subtext {
-    font-size: 0.92rem;
-    line-height: 1.5;
-    color: var(--ink-2);
-    margin-bottom: 1rem;
+.auth-card h2 {
+    font-family: "Cambria", "Times New Roman", serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.01em;
 }
 
+.auth-card form button {
+    margin-top: 1rem;
+}
 
+.logout-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.55rem;
+    padding: 0.46rem 0.95rem;
+    border-radius: 0.8rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: white;
+    background: linear-gradient(180deg, var(--gold-light), var(--gold));
+    box-shadow: 0 8px 16px -12px rgba(217, 119, 6, 0.42);
+    transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+}
+
+.logout-link:hover {
+    background: linear-gradient(180deg, #f7aa1d, #e28508);
+    box-shadow: 0 12px 20px -14px rgba(217, 119, 6, 0.48);
+    transform: translateY(-1px);
+}
+
+.logout-link:active {
+    transform: translateY(0);
+}
