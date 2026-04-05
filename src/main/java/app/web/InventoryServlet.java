@@ -13,7 +13,11 @@ import java.util.List;
 public class InventoryServlet extends BaseServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String tenantId = tenantOrDefault(req.getParameter("tenant"));
+        String tenantId = loggedInTenant(req);
+        if (tenantId == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
+            return;
+        }
         List<Ingredient> ingredients = services().inventoryManager().listIngredients(tenantId).stream()
             .filter(ingredient -> ingredient.getQuantity() > 1e-9)
             .toList();
@@ -24,7 +28,11 @@ public class InventoryServlet extends BaseServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String tenantId = tenantOrDefault(req.getParameter("tenant"));
+        String tenantId = loggedInTenant(req);
+        if (tenantId == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
+            return;
+        }
         String action = req.getParameter("action");
 
         try {

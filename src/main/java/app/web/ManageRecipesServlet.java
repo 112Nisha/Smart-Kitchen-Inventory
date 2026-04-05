@@ -17,7 +17,11 @@ public class ManageRecipesServlet extends BaseServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        String tenant = tenantOrDefault(req.getParameter("tenant"));
+        String tenant = loggedInTenant(req);
+        if (tenant == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
+            return;
+        }
 
         List<DishRecipe> allRecipes = services().dishRecommendationService().getAllRecipes(tenant);
 
@@ -33,7 +37,11 @@ public class ManageRecipesServlet extends BaseServlet {
     /** handles POST requests to delete a recipe */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String tenant = tenantOrDefault(req.getParameter("tenant"));
+        String tenant = loggedInTenant(req);
+        if (tenant == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
+            return;
+        }
         String recipeIdStr = req.getParameter("recipeId");
 
         if (recipeIdStr != null && !recipeIdStr.isBlank()) {

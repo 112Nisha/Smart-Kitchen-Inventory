@@ -5,19 +5,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Kitchen Inventory</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/styles.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/styles.css?v=20260405">
 </head>
 <body>
-<div class="app-shell">
+<div class="app-shell ${empty sessionScope.tenant ? 'no-nav' : ''}">
     <header class="top-bar">
         <h1>Smart Kitchen Inventory</h1>
-        <p>Tenant: <strong><c:out value="${tenant}"/></strong></p>
+
+        <c:if test="${not empty sessionScope.tenant}">
+            <p>
+                Tenant: <strong><c:out value="${sessionScope.tenant}" /></strong>
+            </p>
+        </c:if>
+
+        <c:if test="${not empty sessionScope.username}">
+            <p>
+                Logged in as <strong><c:out value="${sessionScope.username}" /></strong>
+                |
+                <a href="${pageContext.request.contextPath}/logout">Logout</a>
+            </p>
+        </c:if>
     </header>
-    <nav class="nav-grid">
-        <a href="${pageContext.request.contextPath}/dashboard?tenant=${tenant}">Dashboard</a>
-        <a href="${pageContext.request.contextPath}/inventory?tenant=${tenant}">Inventory</a>
-        <a href="${pageContext.request.contextPath}/expiry-alerts?tenant=${tenant}">Expiry Alerts</a>
-        <a href="${pageContext.request.contextPath}/recommendations?tenant=${tenant}">Dish Suggestions</a>
-        <a href="${pageContext.request.contextPath}/shopping-list?tenant=${tenant}">Shopping List</a>
-    </nav>
+
+    <c:if test="${not empty sessionScope.tenant}">
+        <nav class="nav-grid">
+            <a href="${pageContext.request.contextPath}/dashboard">Dashboard</a>
+            <a href="${pageContext.request.contextPath}/inventory">Inventory</a>
+            <a href="${pageContext.request.contextPath}/expiry-alerts">Expiry Alerts</a>
+            <a href="${pageContext.request.contextPath}/recommendations">Dish Suggestions</a>
+            <a href="${pageContext.request.contextPath}/shopping-list">Shopping List</a>
+        </nav>
+    </c:if>
+
     <main>
