@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ExpiryAlertService {
+    private static final double MIN_ALERTABLE_QUANTITY = 1e-9;
+
     private final InventoryManager inventoryManager;
     private final AlertHandler alertChain;
     private final AlertEventBus eventBus;
@@ -25,6 +27,9 @@ public class ExpiryAlertService {
         List<ExpiryAlertContext> contexts = new ArrayList<>();
 
         for (Ingredient ingredient : inventoryManager.listIngredients(tenantId)) {
+            if (ingredient.getQuantity() <= MIN_ALERTABLE_QUANTITY) {
+                continue;
+            }
             if (!ingredient.getState().shouldTriggerExpiryAlert()) {
                 continue;
             }

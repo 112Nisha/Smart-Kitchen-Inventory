@@ -1,10 +1,23 @@
 package app;
 
+import app.alerts.AlertEventBus;
+import app.alerts.AlertHandler;
+import app.alerts.ChefNotificationHandler;
+import app.alerts.ChefObserver;
+import app.alerts.ExpiryAlertContext;
+import app.alerts.ExpiryCheckHandler;
+import app.alerts.ManagerNotificationHandler;
+import app.alerts.ManagerObserver;
+import app.alerts.UrgencyFlagHandler;
 import app.model.DishRecipe;
 import app.model.Ingredient;
+import app.notification.EmailNotificationStrategy;
+import app.notification.InMemoryNotificationStore;
+import app.notification.NotificationService;
 import app.repository.DishRepository;
 import app.repository.IngredientRepository;
 import app.service.DishRecommendationService;
+import app.service.ExpiryAlertService;
 import app.service.InventoryManager;
 import org.junit.jupiter.api.Test;
 
@@ -89,6 +102,43 @@ class DishRecommendationFlowTest {
                 .anyMatch(ingredient -> ingredient.isExpiringSoon()
                         && ingredient.getExpiryHint().toLowerCase().contains("try to use")));
     }
+
+        @Test
+        void logAsCookedToZeroRemovesItemsFromExpiryAlerts() {
+                InventoryManager.resetInstanceForTests();
+                IngredientRepository ingredientRepository = new IngredientRepository();
+                InventoryManager inventoryManager = InventoryManager.getInstance(ingredientRepository, 3);
+                DishRecommendationService recommendationService = new DishRecommendationService(inventoryManager,
+                                new DishRepository());
+
+                String tenant = "restaurant-a";
+
+                inventoryManager.addIngredient(new Ingredient(tenant, "Tomato", 0.3, "kg", LocalDate.now().plusDays(1), 0.1));
+                inventoryManager.addIngredient(new Ingredient(tenant, "Basil", 0.05, "kg", LocalDate.now().plusDays(1), 0.01));
+                inventoryManager.addIngredient(new Ingredient(tenant, "Garlic", 0.02, "kg", LocalDate.now().plusDays(1), 0.01));
+                inventoryManager.addIngredient(new Ingredient(tenant, "Pasta", 0.2, "kg", LocalDate.now().plusDays(1), 0.1));
+
+                recommendationService.logDishAsCooked(tenant, "Tomato Basil Pasta");
+
+                InMemoryNotificationStore store = new InMemoryNotificationStore();
+                NotificationService notificationService = new NotificationService(2);
+                notificationService.registerStrategy(new EmailNotificationStrategy(store));
+
+                AlertHandler expiryCheck = new ExpiryCheckHandler(3);
+                AlertHandler urgency = new UrgencyFlagHandler(20);
+                AlertHandler chef = new ChefNotificationHandler(notificationService);
+                AlertHandler managerNotify = new ManagerNotificationHandler(notificationService);
+                expiryCheck.setNext(urgency).setNext(chef).setNext(managerNotify);
+
+                AlertEventBus eventBus = new AlertEventBus();
+                eventBus.subscribe(new ChefObserver());
+                eventBus.subscribe(new ManagerObserver());
+
+                ExpiryAlertService alertService = new ExpiryAlertService(inventoryManager, expiryCheck, eventBus);
+                List<ExpiryAlertContext> alerts = alertService.evaluateAndNotify(tenant);
+
+                assertTrue(alerts.isEmpty());
+        }
 
     private double quantityOf(List<Ingredient> inventory, String ingredientName, String unit) {
         return inventory.stream()

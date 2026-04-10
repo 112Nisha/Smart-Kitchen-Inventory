@@ -54,6 +54,35 @@ public class Ingredient {
         this.state = state;
     }
 
+    public static Ingredient rehydrate(String id,
+                                       String tenantId,
+                                       String name,
+                                       double quantity,
+                                       String unit,
+                                       LocalDate expiryDate,
+                                       double lowStockThreshold,
+                                       boolean discarded,
+                                       IngredientLifecycle lifecycle) {
+        IngredientState resolvedState = discarded ? new DiscardedState() : switch (Objects.requireNonNull(lifecycle, "lifecycle is required")) {
+            case FRESH -> new FreshState();
+            case NEAR_EXPIRY -> new NearExpiryState();
+            case EXPIRED -> new ExpiredState();
+            case DISCARDED -> new DiscardedState();
+        };
+
+        return new Ingredient(
+                Objects.requireNonNull(id, "id is required"),
+                Objects.requireNonNull(tenantId, "tenantId is required"),
+                Objects.requireNonNull(name, "name is required"),
+                quantity,
+                Objects.requireNonNull(unit, "unit is required"),
+                Objects.requireNonNull(expiryDate, "expiryDate is required"),
+                lowStockThreshold,
+                discarded,
+                resolvedState
+        );
+    }
+
     public Ingredient copy() {
         IngredientState copiedState = discarded ? new DiscardedState() : switch (state.getLifecycle()) {
             case FRESH -> new FreshState();
