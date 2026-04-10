@@ -26,6 +26,7 @@ Prototype implementation of a web-based restaurant inventory system focused on r
 
 ## Quick Start
 ```bash
+export GEMINI_API_KEY="your_gemini_api_key"
 mvn clean package
 mvn tomcat7:run
 ```

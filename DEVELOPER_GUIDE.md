@@ -13,6 +13,11 @@
 mvn clean package
 ```
 
+Set the assistant API key before running from terminal:
+```bash
+export GEMINI_API_KEY="your_gemini_api_key"
+```
+
 WAR output:
 - `target/smart-kitchen-inventory.war`
 

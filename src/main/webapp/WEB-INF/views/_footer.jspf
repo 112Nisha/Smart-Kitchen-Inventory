@@ -8,8 +8,11 @@
 
             <div id="assistant-panel" class="assistant-panel" hidden>
                 <div class="assistant-panel-header">
-                    <h3>Navigation Guide</h3>
-                    <p>Ask what you want to do, and get fast steps.</p>
+                    <div>
+                        <h3>Navigation Guide</h3>
+                        <p>Ask what you want to do, and get fast steps.</p>
+                    </div>
+                    <button type="button" class="assistant-close" aria-label="Close navigation guide">X</button>
                 </div>
 
                 <form class="assistant-form" autocomplete="off">
@@ -63,6 +66,7 @@
 
     const toggleButton = widget.querySelector(".assistant-toggle");
     const panel = widget.querySelector(".assistant-panel");
+    const closeButton = widget.querySelector(".assistant-close");
     const form = widget.querySelector(".assistant-form");
     const input = widget.querySelector(".assistant-input");
     const submitButton = widget.querySelector(".assistant-submit");
@@ -139,6 +143,12 @@
     toggleButton.addEventListener("click", () => {
         setOpen(panel.hidden);
     });
+
+    if (closeButton) {
+        closeButton.addEventListener("click", () => {
+            setOpen(false);
+        });
+    }
 
     suggestionButtons.forEach((button) => {
         button.addEventListener("click", () => {
