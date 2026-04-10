@@ -15,7 +15,7 @@ Prototype implementation of a web-based restaurant inventory system focused on r
 - Backend: Java Servlets
 - Packaging: Maven WAR
 - Server: Apache Tomcat 
-- Data layer: in-memory repository (prototype)
+- Data layer: SQLite (users, recipes, and ingredient inventory)
 
 ## Design and Architecture
 - Singleton Pattern: centralized `InventoryManager`

@@ -3,7 +3,6 @@ package app.config;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -76,6 +75,20 @@ public class DatabaseInitializer {
                 );
                 """;
 
+        String createInventoryIngredientsTable = """
+            CREATE TABLE IF NOT EXISTS inventory_ingredients (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                quantity REAL NOT NULL,
+                unit TEXT NOT NULL,
+                expiry_date TEXT NOT NULL,
+                low_stock_threshold REAL NOT NULL,
+                discarded INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (tenant_id) REFERENCES restaurants(name) ON DELETE CASCADE
+            );
+            """;
+
         try (Connection conn = DriverManager.getConnection(URL);
                 Statement stmt = conn.createStatement()) {
 
@@ -84,6 +97,7 @@ public class DatabaseInitializer {
             stmt.execute(createUsersTable);
             stmt.execute(createRecipesTable);
             stmt.execute(createIngredientsTable);
+            stmt.execute(createInventoryIngredientsTable);
 
         } catch (SQLException e) {
             throw new RuntimeException("Failed to create database tables", e);
