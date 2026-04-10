@@ -30,7 +30,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class NavigationAssistantService {
-    private static final String GEMINI_API_KEY = "AIzaSyBcomJsoKvRaF_lnn4pBop5Q2Z_zAOAVlw";
     private static final String GEMINI_MODEL = "gemini-2.5-flash";
     private static final String GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(8);
@@ -59,6 +58,10 @@ public class NavigationAssistantService {
     private static final Pattern BUTTON_SIGNAL_PATTERN = Pattern.compile("(?i)<button[^>]*>([^<]{1,80})</button>");
     private static final Pattern LABEL_SIGNAL_PATTERN = Pattern.compile("(?i)<label[^>]*>([^<]{1,80})</label>");
     private static final Pattern CONTROLLER_ACTION_PATTERN = Pattern.compile("(?i)\\b(add|update|delete|remove|create|list|view|manage|switch)\\b");
+    private static final Pattern SHORT_ANSWER_FIELD_PATTERN = Pattern.compile(
+            "\\\"shortAnswer\\\"\\s*:\\s*\\\"((?:\\\\.|[^\\\\\"])*)\\\"",
+            Pattern.CASE_INSENSITIVE
+        );
     private static final List<ShortcutRule> SHORTCUT_RULES = List.of(
             new ShortcutRule("/dashboard", "dashboard", "Dashboard"),
             new ShortcutRule("/inventory", "inventory", "Inventory"),
@@ -220,11 +223,40 @@ public class NavigationAssistantService {
             List<String> quickTips = readStringArray(json.getAsJsonArray("quickTips"), 4);
             return new AssistantReply(shortAnswer, steps, actions, quickTips);
         } catch (JsonSyntaxException ex) {
+            String recoveredShortAnswer = recoverShortAnswer(cleaned);
+            if (!recoveredShortAnswer.isBlank()) {
+                return new AssistantReply(recoveredShortAnswer, List.of(), List.of(), List.of());
+            }
+
             String plainText = sanitizeLine(cleaned);
-            if (!plainText.isBlank()) {
+            boolean looksLikeBrokenJson = plainText.startsWith("{") || plainText.contains("\"shortAnswer\"");
+            if (!plainText.isBlank() && !looksLikeBrokenJson) {
                 return new AssistantReply(plainText, List.of(), List.of(), List.of());
             }
+
             throw new IllegalStateException("Gemini response is not valid JSON", ex);
+        }
+    }
+
+    private String recoverShortAnswer(String rawModelText) {
+        if (rawModelText == null || rawModelText.isBlank()) {
+            return "";
+        }
+
+        Matcher matcher = SHORT_ANSWER_FIELD_PATTERN.matcher(rawModelText);
+        if (!matcher.find()) {
+            return "";
+        }
+
+        String escapedValue = matcher.group(1);
+        try {
+            return sanitizeLine(gson.fromJson("\"" + escapedValue + "\"", String.class));
+        } catch (JsonSyntaxException ignored) {
+            return sanitizeLine(escapedValue
+                    .replace("\\n", " ")
+                    .replace("\\r", " ")
+                    .replace("\\t", " ")
+                    .replace("\\\"", "\""));
         }
     }
 
@@ -572,7 +604,7 @@ public class NavigationAssistantService {
         if (envKey != null && !envKey.isBlank()) {
             return envKey.trim();
         }
-        return GEMINI_API_KEY;
+        return "";
     }
 
     private String normalizeTenant(String tenantId) {
