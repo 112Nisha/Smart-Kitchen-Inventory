@@ -32,7 +32,7 @@ import java.util.stream.Stream;
 public class NavigationAssistantService {
     private static final String GEMINI_MODEL = "gemini-2.5-flash";
     private static final String GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(8);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(20);
     private static final String DEFAULT_TENANT = "restaurant-a";
     private static final Duration CONTEXT_CACHE_TTL = Duration.ofMinutes(18);
     private static final int MAX_CONTEXT_FILES = 72;
@@ -61,7 +61,7 @@ public class NavigationAssistantService {
     private static final Pattern SHORT_ANSWER_FIELD_PATTERN = Pattern.compile(
             "\\\"shortAnswer\\\"\\s*:\\s*\\\"((?:\\\\.|[^\\\\\"])*)\\\"",
             Pattern.CASE_INSENSITIVE
-        );
+    );
     private static final List<ShortcutRule> SHORTCUT_RULES = List.of(
             new ShortcutRule("/dashboard", "dashboard", "Dashboard"),
             new ShortcutRule("/inventory", "inventory", "Inventory"),
@@ -70,6 +70,15 @@ public class NavigationAssistantService {
             new ShortcutRule("/recommendations", "recommendations", "Dish Suggestions"),
             new ShortcutRule("/recipes/add", "add recipe", "Add Recipe"),
             new ShortcutRule("/recipes/manage", "manage recipes", "Manage Recipes")
+    );
+    private static final Set<String> ALLOWED_ACTION_ROUTES = Set.of(
+            "/dashboard",
+            "/inventory",
+            "/expiry-alerts",
+            "/shopping-list",
+            "/recommendations",
+            "/recipes/add",
+            "/recipes/manage"
     );
 
     private final HttpClient httpClient;
@@ -201,6 +210,7 @@ public class NavigationAssistantService {
             + "- actions: 0 to 4 one-click actions.\\n"
                 + "- quickTips: 0 to 3 optional tips.\\n"
             + "- Every action URL must be an in-app relative path that starts with /.\\n"
+            + "- Allowed action URLs only: /dashboard, /inventory, /expiry-alerts, /shopping-list, /recommendations, /recipes/add, /recipes/manage.\\n"
             + "- Every action URL should include ?tenant=" + tenantId + "\\n"
                 + "- Do not output markdown fences.\\n"
             + "Tenant: " + tenantId + "\\n"
@@ -554,6 +564,9 @@ public class NavigationAssistantService {
         }
 
         path = normalizeRouteAlias(path);
+        if (!ALLOWED_ACTION_ROUTES.contains(path)) {
+            return "";
+        }
 
         return path + "?tenant=" + urlEncode(tenantId);
     }
@@ -563,9 +576,13 @@ public class NavigationAssistantService {
             return "";
         }
 
-        return switch (path) {
+        String normalized = path.trim().toLowerCase(Locale.ROOT);
+
+        return switch (normalized) {
+            case "/add-recipe", "/recipes/new", "/new-recipe", "/add-dish", "/new-dish" -> "/recipes/add";
+            case "/manage-recipes", "/recipes/list", "/recipe-management" -> "/recipes/manage";
             case "/dish-recommendations", "/dish-suggestions" -> "/recommendations";
-            default -> path;
+            default -> normalized;
         };
     }
 
