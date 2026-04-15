@@ -89,6 +89,37 @@ public class DatabaseInitializer {
             );
             """;
 
+        // Notifications table (Fix 7): durable store for chef/manager alerts
+        // so they survive restarts. `dedup_key` carries the same
+        // tenant|ingredient|role|date string the in-memory store uses, and is
+        // marked UNIQUE so INSERT OR IGNORE collapses repeats at the DB level.
+        // ingredient_id is nullable to support legacy 4-arg NotificationMessage
+        // constructions (the dedup logic falls back to subject when null).
+        String createNotificationsTable = """
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                ingredient_id TEXT,
+                recipient_role TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                body TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                dedup_key TEXT NOT NULL UNIQUE
+            );
+            """;
+
+        // Bundle 3: key/value store for operator-tunable alert thresholds
+        // (near-expiry window, manager escalation window, notification
+        // retention). A simple flat table keeps the read path a single
+        // SELECT — the cache lives in AlertConfigService, not here.
+        String createAppConfigTable = """
+            CREATE TABLE IF NOT EXISTS app_config (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            """;
+
         try (Connection conn = DriverManager.getConnection(URL);
                 Statement stmt = conn.createStatement()) {
 
@@ -98,6 +129,8 @@ public class DatabaseInitializer {
             stmt.execute(createRecipesTable);
             stmt.execute(createIngredientsTable);
             stmt.execute(createInventoryIngredientsTable);
+            stmt.execute(createNotificationsTable);
+            stmt.execute(createAppConfigTable);
 
         } catch (SQLException e) {
             throw new RuntimeException("Failed to create database tables", e);

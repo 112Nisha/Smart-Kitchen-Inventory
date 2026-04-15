@@ -9,12 +9,25 @@ import java.util.Objects;
 public class NotificationService {
     private final List<NotificationStrategy> strategies = new ArrayList<>();
     private final int maxRetries;
+    // Base delay (ms) used for exponential back-off between retry attempts (NFR4).
+    private final long backoffBaseMillis;
 
     public NotificationService(int maxRetries) {
+        // Default base delay keeps unit tests fast (10ms * 2^n) while still
+        // demonstrating back-off behaviour in end-to-end runs.
+        this(maxRetries, 10L);
+    }
+
+    public NotificationService(int maxRetries, long backoffBaseMillis) {
         if (maxRetries < 1) {
             throw new IllegalArgumentException("maxRetries must be >= 1");
         }
+        if (backoffBaseMillis < 0) {
+            // Negative delays are nonsensical; reject at construction time.
+            throw new IllegalArgumentException("backoffBaseMillis must be >= 0");
+        }
         this.maxRetries = maxRetries;
+        this.backoffBaseMillis = backoffBaseMillis;
     }
 
     public void registerStrategy(NotificationStrategy strategy) {
@@ -39,6 +52,12 @@ public class NotificationService {
                 } catch (RuntimeException ex) {
                     lastFailure = ex;
                     attempt++;
+                    // Apply exponential back-off BETWEEN attempts (not after the
+                    // final attempt). This satisfies NFR4: retries use an
+                    // increasing delay rather than hammering the downstream.
+                    if (attempt < maxRetries) {
+                        sleepForBackoff(attempt);
+                    }
                 }
             }
         }
@@ -48,6 +67,25 @@ public class NotificationService {
                 throw lastFailure;
             }
             throw new IllegalStateException("Notification delivery failed");
+        }
+    }
+
+    private void sleepForBackoff(int attempt) {
+        // Skip sleeping when base is zero — useful for tests that want to
+        // exercise the retry path without paying real wall-clock time.
+        if (backoffBaseMillis == 0L) {
+            return;
+        }
+        // Delay = base * 2^(attempt-1): first retry waits `base`, second
+        // waits 2*base, third waits 4*base, etc.
+        long delay = backoffBaseMillis * (1L << (attempt - 1));
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException ie) {
+            // Preserve interrupt status so callers/executors can react; we
+            // simply abandon the remaining back-off and let the next attempt
+            // proceed immediately.
+            Thread.currentThread().interrupt();
         }
     }
 }

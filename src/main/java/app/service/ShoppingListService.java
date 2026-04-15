@@ -22,7 +22,6 @@ public class ShoppingListService {
     public List<Ingredient> generateShoppingList(String tenantId) {
         return inventoryManager.listIngredients(tenantId)
                 .stream()
-                .filter(ingredient -> !ingredient.isDiscarded())
                 .filter(ingredient -> ingredient.getQuantity() <= ingredient.getLowStockThreshold())
                 .toList();
     }
