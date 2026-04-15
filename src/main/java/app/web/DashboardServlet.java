@@ -11,10 +11,12 @@ import app.web.*;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.annotation.WebServlet;
 
 import java.io.IOException;
 import java.util.List;
 
+@WebServlet("/dashboard")
 public class DashboardServlet extends BaseServlet {
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
