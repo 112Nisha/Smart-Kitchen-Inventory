@@ -1,4 +1,4 @@
-package app.alerts;
+package app.service;
 
 import app.model.IngredientLifecycle;
 

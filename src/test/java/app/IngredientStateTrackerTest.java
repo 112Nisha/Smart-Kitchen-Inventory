@@ -1,6 +1,6 @@
 package app;
 
-import app.alerts.IngredientStateTracker;
+import app.service.IngredientStateTracker;
 import app.model.IngredientLifecycle;
 import org.junit.jupiter.api.Test;
 

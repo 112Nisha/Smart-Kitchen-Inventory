@@ -2,7 +2,7 @@ package app;
 
 import app.model.Ingredient;
 import app.model.NotificationMessage;
-import app.notification.InMemoryNotificationStore;
+import app.repository.InMemoryNotificationStore;
 import app.repository.IngredientRepository;
 import app.service.InventoryManager;
 import app.service.ShoppingListService;
@@ -60,7 +60,8 @@ class DashboardLoadPerformanceTest {
                         null,
                         null,
                         null,
-                        notificationStore
+                        notificationStore,
+                        null
                 ),
                 tenant
         );
@@ -101,7 +102,8 @@ class DashboardLoadPerformanceTest {
         for (int i = 0; i < count; i++) {
             store.save(new NotificationMessage(
                     tenantId,
-                    i % 2 == 0 ? "CHEF" : "MANAGER",
+                    "ingredient-" + i,
+                    "STAKEHOLDER",
                     "Alert " + i,
                     "Body " + i
             ));

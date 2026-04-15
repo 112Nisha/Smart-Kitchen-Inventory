@@ -1,9 +1,9 @@
 package app;
 
-import app.alerts.ExpiryAlertContext;
-import app.alerts.StakeholderNotificationHandler;
+import app.model.ExpiryAlertContext;
+import app.service.StakeholderNotificationHandler;
 import app.model.Ingredient;
-import app.notification.NotificationService;
+import app.service.NotificationService;
 import app.repository.IngredientRepository;
 import app.service.ExpiryAlertService;
 import app.service.InventoryManager;

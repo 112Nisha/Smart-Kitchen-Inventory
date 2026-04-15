@@ -50,10 +50,15 @@
                 </thead>
                 <tbody>
                 <c:forEach var="n" items="${notifications}">
-                    <tr>
+                    <tr class="row-${n.status}">
                         <td>${n.when}</td>
                         <td><c:out value="${n.subject}"/></td>
-                        <td><c:out value="${n.body}"/></td>
+                        <td>
+                            <c:out value="${n.body}"/>
+                            <c:if test="${n.status == 'DISCARDED'}">
+                                <span class="status-tag">discarded</span>
+                            </c:if>
+                        </td>
                     </tr>
                 </c:forEach>
                 </tbody>

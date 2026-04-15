@@ -1,7 +1,7 @@
 package app;
 
 import app.model.NotificationMessage;
-import app.notification.NotificationService;
+import app.service.NotificationService;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;

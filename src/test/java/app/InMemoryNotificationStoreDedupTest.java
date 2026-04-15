@@ -1,7 +1,7 @@
 package app;
 
 import app.model.NotificationMessage;
-import app.notification.InMemoryNotificationStore;
+import app.repository.InMemoryNotificationStore;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

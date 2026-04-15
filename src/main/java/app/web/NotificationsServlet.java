@@ -1,14 +1,24 @@
 package app.web;
 
 import app.config.AlertConfig;
+import app.model.Ingredient;
+import app.model.IngredientLifecycle;
+import app.model.NotificationMessage;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Notifications page: durable log view over the store (newest first), plus an
@@ -29,21 +39,25 @@ public class NotificationsServlet extends BaseServlet {
 
     // JavaBean-style getters (not just record accessors) because Tomcat 7's EL
     // resolver reads properties via getX() naming, not via record component
-    // accessors like when().
+    // accessors like when(). The status field exposes the current ingredient
+    // lifecycle so the JSP can style the row (e.g. dim discarded entries).
     public static final class NotificationView {
         private final String when;
         private final String subject;
         private final String body;
+        private final String status;
 
-        public NotificationView(String when, String subject, String body) {
+        public NotificationView(String when, String subject, String body, String status) {
             this.when = when;
             this.subject = subject;
             this.body = body;
+            this.status = status;
         }
 
         public String getWhen() { return when; }
         public String getSubject() { return subject; }
         public String getBody() { return body; }
+        public String getStatus() { return status; }
     }
 
     @Override
@@ -54,11 +68,49 @@ public class NotificationsServlet extends BaseServlet {
             return;
         }
 
-        List<NotificationView> notifications = services().notificationStore().allForTenant(tenantId).stream()
-                .map(m -> new NotificationView(
-                        WHEN_FORMAT.format(m.getCreatedAt()),
-                        m.getSubject(),
-                        m.getBody()))
+        // Build a tenant-scoped lookup of ingredient state (including discarded)
+        // so each notification row can be classified at render time. The log
+        // itself is never mutated — sorting and filtering happen here so a
+        // threshold change or discard immediately reorders the view without
+        // losing the underlying audit trail.
+        Map<String, Ingredient> ingredientsById = services().inventoryManager()
+                .listIngredientsIncludingDiscarded(tenantId).stream()
+                .collect(Collectors.toMap(Ingredient::getId, Function.identity(), (a, b) -> a));
+
+        LocalDate today = LocalDate.now();
+        List<RankedNotification> ranked = new ArrayList<>();
+        for (NotificationMessage m : services().notificationStore().allForTenant(tenantId)) {
+            Ingredient ingredient = ingredientsById.get(m.getIngredientId());
+            if (ingredient == null) {
+                // Orphan log row (ingredient deleted entirely) — drop it; nothing
+                // sensible to render alongside the actionable rows.
+                continue;
+            }
+            IngredientLifecycle lifecycle = ingredient.getLifecycle();
+
+            // Discarded → bottom, regardless of when it expired. Expired and
+            // near-expiry are sorted by absolute days-until-expiry (negative
+            // first, so "Discard immediately" rows surface above near-expiry).
+            // Anything else (FRESH after a threshold tightening, consumed to
+            // zero) is no longer actionable and is hidden.
+            long sortKey;
+            if (lifecycle == IngredientLifecycle.DISCARDED) {
+                sortKey = Long.MAX_VALUE;
+            } else if (lifecycle == IngredientLifecycle.EXPIRED || lifecycle == IngredientLifecycle.NEAR_EXPIRY) {
+                sortKey = ChronoUnit.DAYS.between(today, ingredient.getExpiryDate());
+            } else {
+                continue;
+            }
+            ranked.add(new RankedNotification(m, lifecycle, sortKey));
+        }
+        ranked.sort(Comparator.comparingLong(RankedNotification::sortKey));
+
+        List<NotificationView> notifications = ranked.stream()
+                .map(r -> new NotificationView(
+                        WHEN_FORMAT.format(r.message().getCreatedAt()),
+                        r.message().getSubject(),
+                        r.message().getBody(),
+                        r.lifecycle().name()))
                 .toList();
 
         AlertConfig current = services().alertConfigService().get();
@@ -108,6 +160,11 @@ public class NotificationsServlet extends BaseServlet {
             resp.sendRedirect(req.getContextPath()
                     + "/notifications?error=" + encodeQueryParam(ex.getMessage()));
         }
+    }
+
+    private record RankedNotification(NotificationMessage message,
+                                      IngredientLifecycle lifecycle,
+                                      long sortKey) {
     }
 
     private int parseIntField(String raw, String label) {

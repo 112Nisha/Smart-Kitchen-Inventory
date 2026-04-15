@@ -1,7 +1,7 @@
-package app.alerts;
+package app.service;
 
+import app.model.ExpiryAlertContext;
 import app.model.NotificationMessage;
-import app.notification.NotificationService;
 
 /**
  * Single stakeholder notifier for the expiry-alert pipeline. Replaces the

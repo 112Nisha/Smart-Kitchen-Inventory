@@ -1,7 +1,7 @@
 package app;
 
-import app.alerts.ExpiryAlertContext;
-import app.alerts.ExpiryAlertScheduler;
+import app.model.ExpiryAlertContext;
+import app.service.ExpiryAlertScheduler;
 import app.service.ExpiryAlertService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package app.notification;
+package app.service;
 
 import app.model.NotificationMessage;
 

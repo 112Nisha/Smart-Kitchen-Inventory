@@ -1,6 +1,7 @@
-package app.notification;
+package app.service;
 
 import app.model.NotificationMessage;
+import app.repository.NotificationStore;
 
 /**
  * Persists notifications to the configured {@link NotificationStore} so the
