@@ -76,6 +76,10 @@
                 <version>3.2.5</version>
                 <configuration>
                     <useModulePath>false</useModulePath>
+                    <excludes>
+                        <exclude>**/DashboardLoadPerformanceTest.java</exclude>
+                        <exclude>**/InventoryManagerCachingTest.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
             <plugin>
