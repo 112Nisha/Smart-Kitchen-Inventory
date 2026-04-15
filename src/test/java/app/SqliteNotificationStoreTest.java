@@ -2,7 +2,7 @@ package app;
 
 import app.config.DatabaseInitializer;
 import app.model.NotificationMessage;
-import app.notification.SqliteNotificationStore;
+import app.repository.SqliteNotificationStore;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;

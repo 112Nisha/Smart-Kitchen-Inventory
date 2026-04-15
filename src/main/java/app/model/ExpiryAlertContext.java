@@ -1,4 +1,4 @@
-package app.alerts;
+package app.model;
 
 import app.model.Ingredient;
 

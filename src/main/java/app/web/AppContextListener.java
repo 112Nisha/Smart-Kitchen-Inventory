@@ -1,13 +1,13 @@
 package app.web;
 
-import app.alerts.ExpiryAlertScheduler;
-import app.alerts.StakeholderNotificationHandler;
+import app.service.ExpiryAlertScheduler;
+import app.service.StakeholderNotificationHandler;
 import app.config.AlertConfigService;
 import app.model.Ingredient;
-import app.notification.DashboardNotificationStrategy;
-import app.notification.NotificationStore;
-import app.notification.NotificationService;
-import app.notification.SqliteNotificationStore;
+import app.service.DashboardNotificationStrategy;
+import app.repository.NotificationStore;
+import app.service.NotificationService;
+import app.repository.SqliteNotificationStore;
 import app.repository.DishRepository;
 import app.repository.IngredientRepository;
 import app.repository.SqliteIngredientRepository;

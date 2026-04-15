@@ -1,6 +1,6 @@
-package app.alerts;
+package app.service;
 
-import app.notification.NotificationStore;
+import app.repository.NotificationStore;
 import app.service.ExpiryAlertService;
 
 import java.time.LocalDate;

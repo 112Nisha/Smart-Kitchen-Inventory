@@ -1,4 +1,4 @@
-package app.state;
+package app.service;
 
 import app.model.ExpiryAlertContext;
 import app.service.ExpiryAlertScheduler;
@@ -18,19 +18,6 @@ import app.web.*;
 
 
 
-public class DiscardedState implements IngredientState {
-    @Override
-    public IngredientLifecycle getLifecycle() {
-        return IngredientLifecycle.DISCARDED;
-    }
-
-    @Override
-    public boolean canRecommendInDish() {
-        return false;
-    }
-
-    @Override
-    public boolean shouldTriggerExpiryAlert() {
-        return false;
-    }
+public interface NotificationStrategy {
+    void send(NotificationMessage message);
 }

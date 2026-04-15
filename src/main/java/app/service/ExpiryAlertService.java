@@ -1,8 +1,8 @@
 package app.service;
 
-import app.alerts.ExpiryAlertContext;
-import app.alerts.IngredientStateTracker;
-import app.alerts.StakeholderNotificationHandler;
+import app.model.ExpiryAlertContext;
+import app.service.IngredientStateTracker;
+import app.service.StakeholderNotificationHandler;
 import app.model.Ingredient;
 
 import java.time.LocalDate;

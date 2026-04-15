@@ -2,8 +2,8 @@ package app;
 
 import app.config.DatabaseInitializer;
 import app.model.NotificationMessage;
-import app.notification.InMemoryNotificationStore;
-import app.notification.SqliteNotificationStore;
+import app.repository.InMemoryNotificationStore;
+import app.repository.SqliteNotificationStore;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;

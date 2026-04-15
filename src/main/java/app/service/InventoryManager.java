@@ -186,20 +186,28 @@ public final class InventoryManager {
     }
 
     public List<Ingredient> listIngredients(String tenantId) {
+        // Discarded items stay in the repository (audit trail for waste
+        // reporting) but are not "current inventory" from the app's
+        // perspective — hiding them here keeps the UI, dashboard counts, and
+        // expiry sweep consistent without each caller re-implementing the
+        // filter. Callers that need discarded rows use
+        // listIngredientsIncludingDiscarded or findById.
+        return listIngredientsIncludingDiscarded(tenantId).stream()
+                .filter(item -> !item.isDiscarded())
+                .toList();
+    }
+
+    // Returns every row for the tenant, discarded or not. Used by views that
+    // need to render a discarded item differently (e.g. the notifications page
+    // pushes discarded rows to the bottom rather than hiding them entirely).
+    public List<Ingredient> listIngredientsIncludingDiscarded(String tenantId) {
         validateTenantId(tenantId);
         List<Ingredient> items = tenantCache.computeIfAbsent(tenantId, key -> ingredientRepository.findByTenant(tenantId));
         items.forEach(item -> {
             normalizePrecision(item);
             item.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
         });
-        // Discarded items stay in the repository (audit trail for waste
-        // reporting) but are not "current inventory" from the app's
-        // perspective — hiding them here keeps the UI, dashboard counts, and
-        // expiry sweep consistent without each caller re-implementing the
-        // filter. Callers that need discarded rows use findById directly.
-        return items.stream()
-                .filter(item -> !item.isDiscarded())
-                .toList();
+        return items;
     }
 
     public Optional<Ingredient> findById(String tenantId, String ingredientId) {
