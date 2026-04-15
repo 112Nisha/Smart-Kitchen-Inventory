@@ -10,16 +10,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 
 public final class InventoryManager {
     private static volatile InventoryManager instance;
 
     private final IngredientRepository ingredientRepository;
-    private final int nearExpiryDays;
+    // Supplier so the near-expiry window can be retuned at runtime from the
+    // admin config page. refreshState calls ask for the current value each
+    // time; a static int would freeze whatever was passed at boot.
+    private final IntSupplier nearExpiryDays;
     private final Map<String, List<Ingredient>> tenantCache = new ConcurrentHashMap<>();
+    // Listeners notified when an ingredient effectively drops out of the
+    // alertable pool — discarded, or consumed to zero quantity. Used by the
+    // expiry-alert subsystem to forget per-ingredient tracker state so the
+    // state map doesn't grow forever. CopyOnWriteArrayList keeps add/fire
+    // lock-free under concurrent read/write, which is fine given listeners
+    // register once at startup.
+    private final List<Consumer<String>> ingredientRemovedListeners = new CopyOnWriteArrayList<>();
 
-    private InventoryManager(IngredientRepository ingredientRepository, int nearExpiryDays) {
+    private InventoryManager(IngredientRepository ingredientRepository, IntSupplier nearExpiryDays) {
         this.ingredientRepository = ingredientRepository;
         this.nearExpiryDays = nearExpiryDays;
     }
@@ -29,10 +43,18 @@ public final class InventoryManager {
     }
 
     public static InventoryManager getInstance(IngredientRepository ingredientRepository, int nearExpiryDays) {
-        Objects.requireNonNull(ingredientRepository, "ingredientRepository is required");
         if (nearExpiryDays < 0) {
             throw new IllegalArgumentException("nearExpiryDays must be >= 0");
         }
+        // Wrap the literal int in a constant supplier for the legacy call sites
+        // (tests, fixtures) that don't need live reload.
+        return getInstance(ingredientRepository, (IntSupplier) () -> nearExpiryDays);
+    }
+
+    public static InventoryManager getInstance(IngredientRepository ingredientRepository,
+                                               IntSupplier nearExpiryDays) {
+        Objects.requireNonNull(ingredientRepository, "ingredientRepository is required");
+        Objects.requireNonNull(nearExpiryDays, "nearExpiryDays supplier is required");
 
         if (instance == null) {
             synchronized (InventoryManager.class) {
@@ -40,7 +62,12 @@ public final class InventoryManager {
                     instance = new InventoryManager(ingredientRepository, nearExpiryDays);
                 }
             }
-        } else if (instance.ingredientRepository != ingredientRepository || instance.nearExpiryDays != nearExpiryDays) {
+        } else if (instance.ingredientRepository != ingredientRepository) {
+            // Repository identity still has to match — swapping repositories
+            // under a live singleton would silently double-initialize state.
+            // The nearExpiryDays supplier check is intentionally dropped: with
+            // live-reload a supplier instance may legitimately change between
+            // calls and we can't meaningfully compare two IntSuppliers.
             throw new IllegalStateException("InventoryManager is already initialized with different configuration");
         }
         return instance;
@@ -76,7 +103,7 @@ public final class InventoryManager {
             item.setUnit(unit);
             item.setExpiryDate(expiryDate);
             item.setLowStockThreshold(roundToTwoDecimals(lowStockThreshold));
-            item.refreshState(LocalDate.now(), nearExpiryDays);
+            item.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
             ingredientRepository.save(item);
             invalidateTenantCache(tenantId);
         });
@@ -94,9 +121,16 @@ public final class InventoryManager {
         existing.ifPresent(item -> {
             double updated = roundToTwoDecimals(Math.max(0, item.getQuantity() - usedQuantity));
             item.setQuantity(updated);
-            item.refreshState(LocalDate.now(), nearExpiryDays);
+            item.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
             ingredientRepository.save(item);
             invalidateTenantCache(tenantId);
+            // Fix 8: consume-to-zero removes the item from the alertable pool.
+            // Notify listeners so they can drop per-ingredient state (e.g. the
+            // expiry tracker's last-seen-lifecycle entry). Partial uses don't
+            // fire — the item is still alertable until quantity hits zero.
+            if (updated == 0.0) {
+                fireIngredientRemoved(ingredientId);
+            }
         });
         return existing;
     }
@@ -108,11 +142,47 @@ public final class InventoryManager {
         Optional<Ingredient> existing = ingredientRepository.findById(tenantId, ingredientId);
         existing.ifPresent(item -> {
             item.setDiscarded(true);
-            item.refreshState(LocalDate.now(), nearExpiryDays);
+            item.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
             ingredientRepository.save(item);
             invalidateTenantCache(tenantId);
+            // Fix 8: discarded items are no longer alertable. Fire the event so
+            // the expiry tracker forgets them immediately rather than carrying
+            // stale lifecycle state until the next sweep.
+            fireIngredientRemoved(ingredientId);
         });
         return existing;
+    }
+
+    /**
+     * Register a callback that fires when an ingredient effectively leaves the
+     * alertable pool (discarded or consumed to zero). Listeners must be
+     * registered at wiring time; there is no unregister path because the
+     * subsystems that use this (expiry tracker) share the lifecycle of the
+     * manager itself.
+     */
+    public void addIngredientRemovedListener(Consumer<String> listener) {
+        ingredientRemovedListeners.add(Objects.requireNonNull(listener, "listener is required"));
+    }
+
+    private void fireIngredientRemoved(String ingredientId) {
+        // Fire-and-continue: one broken listener must not stop the others from
+        // running or bubble a random exception out of a routine mutation.
+        // We swallow and log to stderr in the same spirit as the scheduler.
+        for (Consumer<String> listener : ingredientRemovedListeners) {
+            try {
+                listener.accept(ingredientId);
+            } catch (RuntimeException ex) {
+                System.err.println("[InventoryManager] removal listener failed: " + ex.getMessage());
+            }
+        }
+    }
+
+    // Returns every tenant id currently known to the repository. Used by the
+    // scheduled expiry-alert runner so it can iterate tenants without a
+    // hard-coded list. Delegates to the repository so SQLite vs. in-memory
+    // backing stays transparent to callers.
+    public Set<String> listKnownTenants() {
+        return ingredientRepository.findAllTenantIds();
     }
 
     public List<Ingredient> listIngredients(String tenantId) {
@@ -120,9 +190,16 @@ public final class InventoryManager {
         List<Ingredient> items = tenantCache.computeIfAbsent(tenantId, key -> ingredientRepository.findByTenant(tenantId));
         items.forEach(item -> {
             normalizePrecision(item);
-            item.refreshState(LocalDate.now(), nearExpiryDays);
+            item.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
         });
-        return List.copyOf(items);
+        // Discarded items stay in the repository (audit trail for waste
+        // reporting) but are not "current inventory" from the app's
+        // perspective — hiding them here keeps the UI, dashboard counts, and
+        // expiry sweep consistent without each caller re-implementing the
+        // filter. Callers that need discarded rows use findById directly.
+        return items.stream()
+                .filter(item -> !item.isDiscarded())
+                .toList();
     }
 
     public Optional<Ingredient> findById(String tenantId, String ingredientId) {
@@ -131,7 +208,7 @@ public final class InventoryManager {
         Optional<Ingredient> found = ingredientRepository.findById(tenantId, ingredientId);
         found.ifPresent(item -> {
             normalizePrecision(item);
-            item.refreshState(LocalDate.now(), nearExpiryDays);
+            item.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
         });
         return found;
     }

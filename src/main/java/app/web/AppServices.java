@@ -1,6 +1,7 @@
 package app.web;
 
 import app.alerts.*;
+import app.config.AlertConfigService;
 import app.model.*;
 import app.notification.*;
 import app.repository.*;
@@ -17,6 +18,7 @@ public record AppServices(
         DishRecommendationService dishRecommendationService,
         WasteImpactService wasteImpactService,
         NavigationAssistantService navigationAssistantService,
-        InMemoryNotificationStore notificationStore
+        NotificationStore notificationStore,
+        AlertConfigService alertConfigService
 ) {
 }

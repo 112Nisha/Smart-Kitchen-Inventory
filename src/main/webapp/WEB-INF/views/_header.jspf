@@ -31,7 +31,7 @@
         <nav class="nav-grid">
             <a href="${pageContext.request.contextPath}/dashboard">Dashboard</a>
             <a href="${pageContext.request.contextPath}/inventory">Inventory</a>
-            <a href="${pageContext.request.contextPath}/expiry-alerts">Expiry Alerts</a>
+            <a href="${pageContext.request.contextPath}/notifications">Notifications</a>
             <a href="${pageContext.request.contextPath}/recommendations">Dish Suggestions</a>
             <a href="${pageContext.request.contextPath}/shopping-list">Shopping List</a>
         </nav>
