@@ -35,6 +35,6 @@ public class LoginServlet extends BaseServlet {
         session.setAttribute("tenant", loginResult.get().restaurantName());
         session.setAttribute("username", loginResult.get().user().getUsername());
 
-        resp.sendRedirect(req.getContextPath() + "/recommendations");
+        resp.sendRedirect(req.getContextPath() + "/dashboard");
     }
 }

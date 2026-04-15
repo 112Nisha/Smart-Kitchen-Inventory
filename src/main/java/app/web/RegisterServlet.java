@@ -39,6 +39,6 @@ public class RegisterServlet extends BaseServlet {
         session.setAttribute("tenant", restaurantName);
         session.setAttribute("username", username);
 
-        resp.sendRedirect(req.getContextPath() + "/recommendations");
+        resp.sendRedirect(req.getContextPath() + "/auth");
     }
 }
