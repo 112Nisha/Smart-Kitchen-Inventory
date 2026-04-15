@@ -11,15 +11,6 @@
     </listener>
 
     <servlet>
-        <servlet-name>dashboardServlet</servlet-name>
-        <servlet-class>app.web.DashboardServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>dashboardServlet</servlet-name>
-        <url-pattern>/dashboard</url-pattern>
-    </servlet-mapping>
-
-    <servlet>
         <servlet-name>inventoryServlet</servlet-name>
         <servlet-class>app.web.InventoryServlet</servlet-class>
     </servlet>
