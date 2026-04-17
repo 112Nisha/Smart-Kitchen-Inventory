@@ -9,36 +9,59 @@ import java.util.Optional;
 public class UserRepository {
 
     /** registers a new restaurant */
-    public void register(String restaurantName, String username, String password) {
+    public void register(String restaurantName, String username, String password, String role) {
+
         String insertRestaurantSql = "INSERT INTO restaurants (name) VALUES (?)";
         String findRestaurantSql = "SELECT id FROM restaurants WHERE name = ?";
-        String insertUserSql = "INSERT INTO users (username, password, restaurant_id) VALUES (?, ?, ?)";
+        String insertUserSql = "INSERT INTO users (username, password, role, restaurant_id) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl())) {
             conn.setAutoCommit(false);
 
             try {
                 Long restaurantId;
-
-                try (PreparedStatement stmt = conn.prepareStatement(insertRestaurantSql)) {
-                    stmt.setString(1, restaurantName);
-                    stmt.executeUpdate();
-                }
+                boolean exists;
 
                 try (PreparedStatement stmt = conn.prepareStatement(findRestaurantSql)) {
                     stmt.setString(1, restaurantName);
                     try (ResultSet rs = stmt.executeQuery()) {
-                        if (!rs.next()) {
-                            throw new IllegalStateException("Failed to create restaurant.");
+                        exists = rs.next();
+                        restaurantId = exists ? rs.getLong("id") : null;
+                    }
+                }
+
+                if (!exists) {
+                    if (!"manager".equalsIgnoreCase(role)) {
+                        throw new IllegalArgumentException("First user must be a manager.");
+                    }
+
+                    try (PreparedStatement stmt = conn.prepareStatement(insertRestaurantSql)) {
+                        stmt.setString(1, restaurantName);
+                        stmt.executeUpdate();
+                    }
+
+                    try (PreparedStatement stmt = conn.prepareStatement(findRestaurantSql)) {
+                        stmt.setString(1, restaurantName);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            if (!rs.next()) {
+                                throw new IllegalStateException("Failed to create restaurant.");
+                            }
+                            restaurantId = rs.getLong("id");
                         }
-                        restaurantId = rs.getLong("id");
+                    }
+                }
+
+                else {
+                    if (!role.equalsIgnoreCase("manager") && !role.equalsIgnoreCase("chef")) {
+                        throw new IllegalArgumentException("Invalid role.");
                     }
                 }
 
                 try (PreparedStatement stmt = conn.prepareStatement(insertUserSql)) {
                     stmt.setString(1, username);
                     stmt.setString(2, password);
-                    stmt.setLong(3, restaurantId);
+                    stmt.setString(3, role.toLowerCase());
+                    stmt.setLong(4, restaurantId);
                     stmt.executeUpdate();
                 }
 
@@ -59,14 +82,20 @@ public class UserRepository {
     /** logs in a user */
     public Optional<LoginResult> login(String username, String password) {
         String sql = """
-                SELECT u.id AS user_id, u.username, u.password, u.restaurant_id, r.name AS restaurant_name
+                SELECT
+                    u.id AS user_id,
+                    u.username,
+                    u.password,
+                    u.restaurant_id,
+                    u.role,
+                    r.name AS restaurant_name
                 FROM users u
                 JOIN restaurants r ON u.restaurant_id = r.id
                 WHERE u.username = ? AND u.password = ?
                 """;
 
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, username);
             stmt.setString(2, password);
@@ -77,8 +106,8 @@ public class UserRepository {
                             rs.getLong("user_id"),
                             rs.getString("username"),
                             rs.getString("password"),
-                            rs.getLong("restaurant_id")
-                    );
+                            rs.getLong("restaurant_id"),
+                            rs.getString("role"));
 
                     String restaurantName = rs.getString("restaurant_name");
                     return Optional.of(new LoginResult(user, restaurantName));
@@ -97,7 +126,7 @@ public class UserRepository {
         String sql = "SELECT 1 FROM users WHERE username = ?";
 
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, username);
 
@@ -115,7 +144,7 @@ public class UserRepository {
         String sql = "SELECT 1 FROM restaurants WHERE name = ?";
 
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, restaurantName);
 
@@ -128,5 +157,6 @@ public class UserRepository {
         }
     }
 
-    public record LoginResult(User user, String restaurantName) {}
+    public record LoginResult(User user, String restaurantName) {
+    }
 }

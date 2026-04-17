@@ -5,12 +5,14 @@ public class User {
     private final String username;
     private final String password;
     private final Long restaurantId;
+    private final String role;
 
-    public User(Long id, String username, String password, Long restaurantId) {
+    public User(Long id, String username, String password, Long restaurantId, String role) {
         this.id = id;
         this.username = username;
         this.password = password;
         this.restaurantId = restaurantId;
+        this.role = role;
     }
 
     public Long getId() {
@@ -27,5 +29,9 @@ public class User {
 
     public Long getRestaurantId() {
         return restaurantId;
+    }
+
+    public String getRole() {
+        return role;
     }
 }

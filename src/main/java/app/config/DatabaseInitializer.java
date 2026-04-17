@@ -34,14 +34,15 @@ public class DatabaseInitializer {
     private static void createTables() {
 
         String createUsersTable = """
-                                    CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT NOT NULL UNIQUE,
-                    password TEXT NOT NULL,
-                    restaurant_id INTEGER NOT NULL UNIQUE,
-                    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
-                );
-                                """;
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL CHECK(role IN ('manager', 'chef')),
+                restaurant_id INTEGER NOT NULL,
+                FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
+            );
+        """;
 
         String createRecipesTable = """
                 CREATE TABLE IF NOT EXISTS dish_recipes (

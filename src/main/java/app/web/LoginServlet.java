@@ -34,7 +34,14 @@ public class LoginServlet extends BaseServlet {
         HttpSession session = req.getSession(true);
         session.setAttribute("tenant", loginResult.get().restaurantName());
         session.setAttribute("username", loginResult.get().user().getUsername());
+        session.setAttribute("role", loginResult.get().user().getRole());
 
-        resp.sendRedirect(req.getContextPath() + "/dashboard");
+        String role = loginResult.get().user().getRole();
+
+        if ("chef".equalsIgnoreCase(role)) {
+            resp.sendRedirect(req.getContextPath() + "/recommendations");
+        } else {
+            resp.sendRedirect(req.getContextPath() + "/dashboard");
+        }
     }
 }
