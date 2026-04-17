@@ -116,7 +116,7 @@
                                         <c:out value="${ingredient.name}"/> -
                                         <fmt:formatNumber value="${ingredient.quantity}" minFractionDigits="2" maxFractionDigits="2"/>
                                         <c:out value="${ingredient.unit}"/>
-                                        <c:if test="${ingredient.expiringSoon}">
+                                        <c:if test="${not empty ingredient.expiryHint}">
                                             <span class="ingredient-expiry-tip">
                                                 <c:out value="${ingredient.emoji}" escapeXml="false"/> <c:out value="${ingredient.expiryHint}"/>
                                             </span>
