@@ -80,18 +80,18 @@ public class UserRepository {
     }
 
     /** logs in a user */
-    public Optional<LoginResult> login(String username, String password) {
+    public Optional<LoginResult> login(String username, String password, String restaurantName) {
         String sql = """
-                SELECT
-                    u.id AS user_id,
-                    u.username,
-                    u.password,
-                    u.restaurant_id,
-                    u.role,
-                    r.name AS restaurant_name
-                FROM users u
-                JOIN restaurants r ON u.restaurant_id = r.id
-                WHERE u.username = ? AND u.password = ?
+                    SELECT
+                        u.id AS user_id,
+                        u.username,
+                        u.password,
+                        u.restaurant_id,
+                        u.role,
+                        r.name AS restaurant_name
+                    FROM users u
+                    JOIN restaurants r ON u.restaurant_id = r.id
+                    WHERE u.username = ? AND u.password = ? AND r.name = ?
                 """;
 
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
@@ -99,6 +99,7 @@ public class UserRepository {
 
             stmt.setString(1, username);
             stmt.setString(2, password);
+            stmt.setString(3, restaurantName);
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -109,7 +110,6 @@ public class UserRepository {
                             rs.getLong("restaurant_id"),
                             rs.getString("role"));
 
-                    String restaurantName = rs.getString("restaurant_name");
                     return Optional.of(new LoginResult(user, restaurantName));
                 }
             }
@@ -122,14 +122,19 @@ public class UserRepository {
     }
 
     /** checks if a username already exists */
-    public boolean usernameExists(String username) {
-        String sql = "SELECT 1 FROM users WHERE username = ?";
+    public boolean usernameExists(String username, String restaurantName) {
+        String sql = """
+                    SELECT 1
+                    FROM users u
+                    JOIN restaurants r ON u.restaurant_id = r.id
+                    WHERE u.username = ? AND r.name = ?
+                """;
 
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, username);
-
+            stmt.setString(2, restaurantName);
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next();
             }
