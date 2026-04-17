@@ -14,17 +14,14 @@ public class RegisterServlet extends BaseServlet {
     /** handles POST requests for user registration */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String restaurantName = req.getParameter("restaurantName") == null ? "" : req.getParameter("restaurantName").trim();
+        String restaurantName = req.getParameter("restaurantName") == null ? ""
+                : req.getParameter("restaurantName").trim();
         String username = req.getParameter("username") == null ? "" : req.getParameter("username").trim();
         String password = req.getParameter("password") == null ? "" : req.getParameter("password").trim();
+        String role = req.getParameter("role") == null ? "" : req.getParameter("role").trim().toLowerCase();
 
-        if (restaurantName.isBlank() || username.isBlank() || password.isBlank()) {
+        if (restaurantName.isBlank() || username.isBlank() || password.isBlank() || role.isBlank()) {
             resp.sendRedirect(req.getContextPath() + "/auth?registerError=Please fill in all registration fields.");
-            return;
-        }
-
-        if (userRepository.restaurantExists(restaurantName)) {
-            resp.sendRedirect(req.getContextPath() + "/auth?registerError=Restaurant already exists. Please log in.");
             return;
         }
 
@@ -33,12 +30,13 @@ public class RegisterServlet extends BaseServlet {
             return;
         }
 
-        userRepository.register(restaurantName, username, password);
+        try {
+            userRepository.register(restaurantName, username, password, role);
+        } catch (IllegalArgumentException e) {
+            resp.sendRedirect(req.getContextPath() + "/auth?registerError=" + e.getMessage());
+            return;
+        }
 
-        HttpSession session = req.getSession(true);
-        session.setAttribute("tenant", restaurantName);
-        session.setAttribute("username", username);
-
-        resp.sendRedirect(req.getContextPath() + "/auth");
+        resp.sendRedirect(req.getContextPath() + "/auth?success=Registration successful. Please log in.");
     }
 }

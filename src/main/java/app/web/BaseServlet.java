@@ -3,6 +3,7 @@ package app.web;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -42,5 +43,14 @@ public abstract class BaseServlet extends HttpServlet {
         if (!isLoggedIn(req)) {
             resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
         }
+    }
+
+    protected boolean isChef(HttpServletRequest req) {
+        HttpSession session = req.getSession(false);
+        if (session == null)
+            return false;
+
+        String role = (String) session.getAttribute("role");
+        return "chef".equalsIgnoreCase(role);
     }
 }

@@ -194,11 +194,13 @@ label {
 }
 
 input,
+select,
 button {
     font: inherit;
 }
 
-input {
+input,
+select {
     width: 100%;
     font-size: 0.95rem;
     color: var(--ink);
@@ -811,3 +813,5 @@ tbody tr:hover {
 .logout-link:active {
     transform: translateY(0);
 }
+
+
