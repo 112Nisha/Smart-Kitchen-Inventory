@@ -1,10 +1,11 @@
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
     <%@ include file="_header.jspf" %>
 
-        <c:if test="${not empty param.success}">
+        <c:if test="${not empty sessionScope.success}">
             <p class="success">
-                <c:out value="${param.success}" />
+                <c:out value="${sessionScope.success}" />
             </p>
+            <c:remove var="success" scope="session" />
         </c:if>
 
         <section class="auth-grid">
@@ -13,13 +14,18 @@
                 <h2>Login to Existing Restaurant</h2>
                 <p class="auth-subtext">Access your restaurant dashboard, inventory, and dish recommendations</p>
 
-                <c:if test="${not empty param.loginError}">
+                <c:if test="${not empty sessionScope.loginError}">
                     <p class="error">
-                        <c:out value="${param.loginError}" />
+                        <c:out value="${sessionScope.loginError}" />
                     </p>
+                    <c:remove var="loginError" scope="session" />
                 </c:if>
 
                 <form method="post" action="${pageContext.request.contextPath}/login">
+
+                    <label for="login-restaurant">Restaurant Name</label>
+                    <input id="login-restaurant" type="text" name="restaurantName" required>
+
                     <label for="login-username">Username</label>
                     <input id="login-username" type="text" name="username" required>
 
@@ -35,10 +41,11 @@
                 <p class="auth-subtext">Create a new restaurant account or register as a new member of an existing
                     restaurant to start managing ingredients and recipes</p>
 
-                <c:if test="${not empty param.registerError}">
+                <c:if test="${not empty sessionScope.registerError}">
                     <p class="error">
-                        <c:out value="${param.registerError}" />
+                        <c:out value="${sessionScope.registerError}" />
                     </p>
+                    <c:remove var="registerError" scope="session" />
                 </c:if>
 
                 <form method="post" action="${pageContext.request.contextPath}/register">

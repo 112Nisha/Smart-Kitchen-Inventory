@@ -20,23 +20,29 @@ public class RegisterServlet extends BaseServlet {
         String password = req.getParameter("password") == null ? "" : req.getParameter("password").trim();
         String role = req.getParameter("role") == null ? "" : req.getParameter("role").trim().toLowerCase();
 
+        HttpSession session = req.getSession();
+
         if (restaurantName.isBlank() || username.isBlank() || password.isBlank() || role.isBlank()) {
-            resp.sendRedirect(req.getContextPath() + "/auth?registerError=Please fill in all registration fields.");
+            session.setAttribute("registerError", "Please fill in all registration fields.");
+            resp.sendRedirect(req.getContextPath() + "/auth");
             return;
         }
 
-        if (userRepository.usernameExists(username)) {
-            resp.sendRedirect(req.getContextPath() + "/auth?registerError=Username already exists.");
+        if (userRepository.usernameExists(username, restaurantName)) {
+            session.setAttribute("registerError", "Username already exists for this restaurant.");
+            resp.sendRedirect(req.getContextPath() + "/auth");
             return;
         }
 
         try {
             userRepository.register(restaurantName, username, password, role);
         } catch (IllegalArgumentException e) {
-            resp.sendRedirect(req.getContextPath() + "/auth?registerError=" + e.getMessage());
+            session.setAttribute("registerError", e.getMessage());
+            resp.sendRedirect(req.getContextPath() + "/auth");
             return;
         }
 
-        resp.sendRedirect(req.getContextPath() + "/auth?success=Registration successful. Please log in.");
+        session.setAttribute("success", "Registration successful. Please log in.");
+        resp.sendRedirect(req.getContextPath() + "/auth");
     }
 }
