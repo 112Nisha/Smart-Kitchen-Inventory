@@ -13,6 +13,13 @@ public class LoginServlet extends BaseServlet {
 
     private final UserRepository userRepository = new UserRepository();
 
+    /** handles GET requests for the login page */
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        req.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(req, resp);
+    }
+
     /** handles POST requests for user login */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -24,7 +31,7 @@ public class LoginServlet extends BaseServlet {
 
         if (restaurantName.isBlank() || username.isBlank() || password.isBlank()) {
         session.setAttribute("loginError", "Please fill in all fields.");
-        resp.sendRedirect(req.getContextPath() + "/auth");
+        resp.sendRedirect(req.getContextPath() + "/login");
         return;
     }
 
@@ -32,7 +39,7 @@ public class LoginServlet extends BaseServlet {
 
         if (loginResult.isEmpty()) {
             session.setAttribute("loginError", "Invalid username, password, or restaurant name.");
-            resp.sendRedirect(req.getContextPath() + "/auth");
+            resp.sendRedirect(req.getContextPath() + "/login");
             return;
         }
 
