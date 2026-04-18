@@ -2,6 +2,7 @@ package app.web;
 
 import app.repository.UserRepository;
 
+import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
@@ -11,34 +12,45 @@ public class RegisterServlet extends BaseServlet {
 
     private final UserRepository userRepository = new UserRepository();
 
+    /** handles GET requests for the registration page */
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        req.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(req, resp);
+    }
+
     /** handles POST requests for user registration */
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String restaurantName = req.getParameter("restaurantName") == null ? "" : req.getParameter("restaurantName").trim();
+        String restaurantName = req.getParameter("restaurantName") == null ? ""
+                : req.getParameter("restaurantName").trim();
         String username = req.getParameter("username") == null ? "" : req.getParameter("username").trim();
         String password = req.getParameter("password") == null ? "" : req.getParameter("password").trim();
+        String role = req.getParameter("role") == null ? "" : req.getParameter("role").trim().toLowerCase();
 
-        if (restaurantName.isBlank() || username.isBlank() || password.isBlank()) {
-            resp.sendRedirect(req.getContextPath() + "/auth?registerError=Please fill in all registration fields.");
+        HttpSession session = req.getSession();
+
+        if (restaurantName.isBlank() || username.isBlank() || password.isBlank() || role.isBlank()) {
+            session.setAttribute("registerError", "Please fill in all registration fields.");
+            resp.sendRedirect(req.getContextPath() + "/register");
             return;
         }
 
-        if (userRepository.restaurantExists(restaurantName)) {
-            resp.sendRedirect(req.getContextPath() + "/auth?registerError=Restaurant already exists. Please log in.");
+        if (userRepository.usernameExists(username, restaurantName)) {
+            session.setAttribute("registerError", "Username already exists for this restaurant.");
+            resp.sendRedirect(req.getContextPath() + "/register");
             return;
         }
 
-        if (userRepository.usernameExists(username)) {
-            resp.sendRedirect(req.getContextPath() + "/auth?registerError=Username already exists.");
+        try {
+            userRepository.register(restaurantName, username, password, role);
+        } catch (IllegalArgumentException e) {
+            session.setAttribute("registerError", e.getMessage());
+            resp.sendRedirect(req.getContextPath() + "/register");
             return;
         }
 
-        userRepository.register(restaurantName, username, password);
-
-        HttpSession session = req.getSession(true);
-        session.setAttribute("tenant", restaurantName);
-        session.setAttribute("username", username);
-
-        resp.sendRedirect(req.getContextPath() + "/auth");
+        session.setAttribute("success", "Registration successful. Please log in.");
+        resp.sendRedirect(req.getContextPath() + "/login");
     }
 }

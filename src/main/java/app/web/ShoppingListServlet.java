@@ -16,7 +16,6 @@ import app.service.*;
 import app.state.*;
 import app.web.*;
 
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -27,6 +26,11 @@ import java.util.List;
 public class ShoppingListServlet extends BaseServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+        if (isChef(req)) {
+            resp.sendRedirect(req.getContextPath() + "/recommendations");
+            return;
+        }
         String tenantId = loggedInTenant(req);
         if (tenantId == null) {
             resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
