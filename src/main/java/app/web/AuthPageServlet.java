@@ -12,6 +12,11 @@ public class AuthPageServlet extends BaseServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-        req.getRequestDispatcher("/WEB-INF/views/auth.jsp").forward(req, resp);
+        String redirectTarget = req.getContextPath() + "/login";
+        String query = req.getQueryString();
+        if (query != null && !query.isBlank()) {
+            redirectTarget = redirectTarget + "?" + query;
+        }
+        resp.sendRedirect(redirectTarget);
     }
 }

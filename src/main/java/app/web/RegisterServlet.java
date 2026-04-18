@@ -2,6 +2,7 @@ package app.web;
 
 import app.repository.UserRepository;
 
+import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
@@ -10,6 +11,13 @@ import java.io.IOException;
 public class RegisterServlet extends BaseServlet {
 
     private final UserRepository userRepository = new UserRepository();
+
+    /** handles GET requests for the registration page */
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        req.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(req, resp);
+    }
 
     /** handles POST requests for user registration */
     @Override
@@ -24,13 +32,13 @@ public class RegisterServlet extends BaseServlet {
 
         if (restaurantName.isBlank() || username.isBlank() || password.isBlank() || role.isBlank()) {
             session.setAttribute("registerError", "Please fill in all registration fields.");
-            resp.sendRedirect(req.getContextPath() + "/auth");
+            resp.sendRedirect(req.getContextPath() + "/register");
             return;
         }
 
         if (userRepository.usernameExists(username, restaurantName)) {
             session.setAttribute("registerError", "Username already exists for this restaurant.");
-            resp.sendRedirect(req.getContextPath() + "/auth");
+            resp.sendRedirect(req.getContextPath() + "/register");
             return;
         }
 
@@ -38,11 +46,11 @@ public class RegisterServlet extends BaseServlet {
             userRepository.register(restaurantName, username, password, role);
         } catch (IllegalArgumentException e) {
             session.setAttribute("registerError", e.getMessage());
-            resp.sendRedirect(req.getContextPath() + "/auth");
+            resp.sendRedirect(req.getContextPath() + "/register");
             return;
         }
 
         session.setAttribute("success", "Registration successful. Please log in.");
-        resp.sendRedirect(req.getContextPath() + "/auth");
+        resp.sendRedirect(req.getContextPath() + "/login");
     }
 }
