@@ -99,6 +99,13 @@ public class DishRecommendationService {
                                 return Optional.empty();
                         }
 
+                        long daysUntilExpiry = matchingInventory.stream()
+                                        .mapToLong(ingredient -> Math.max(0,
+                                                        ChronoUnit.DAYS.between(today,
+                                                                        ingredient.getExpiryDate())))
+                                        .min()
+                                        .orElse(0L);
+
                         totalRequiredQuantity += Math.max(0, recipeIngredient.getQuantity());
 
                         double nearExpiryAvailableQuantity = matchingInventory.stream()
@@ -112,25 +119,14 @@ public class DishRecommendationService {
                                         nearExpiryAvailableQuantity);
                         boolean expiringSoon = nearExpiryUsedForIngredient > 1e-9;
 
-                        String emoji = "";
-                        String expiryHint = "";
+                        String emoji = buildExpiryEmoji(daysUntilExpiry);
+                        String expiryHint = buildExpiryHint(daysUntilExpiry);
 
                         if (expiringSoon) {
                                 nearExpiryIngredientCount++;
                                 nearExpiryUsedQuantity += nearExpiryUsedForIngredient;
 
-                                long daysUntilExpiry = matchingInventory.stream()
-                                                .filter(ingredient -> ingredient
-                                                                .getLifecycle() == IngredientLifecycle.NEAR_EXPIRY)
-                                                .mapToLong(ingredient -> Math.max(0,
-                                                                ChronoUnit.DAYS.between(today,
-                                                                                ingredient.getExpiryDate())))
-                                                .min()
-                                                .orElse(0L);
-
                                 urgencyAccumulator += urgencyScoreByDays(daysUntilExpiry);
-                                emoji = buildExpiryEmoji(daysUntilExpiry);
-                                expiryHint = buildExpiryHint(daysUntilExpiry);
                         }
 
                         suggestionIngredients.add(new SuggestionIngredient(
@@ -194,16 +190,17 @@ public class DishRecommendationService {
         }
 
         private String buildExpiryHint(long daysUntilExpiry) {
-                if (daysUntilExpiry <= 0) {
-                        return "This is expiring today! Try to use now.";
+                long safeDaysUntilExpiry = Math.max(0, daysUntilExpiry);
+                if (safeDaysUntilExpiry == 0) {
+                        return "Expires today! Use immediately.";
                 }
-                if (daysUntilExpiry == 1) {
-                        return "This is expiring tomorrow! Try to use.";
+                if (safeDaysUntilExpiry == 1) {
+                        return "Expires tomorrow! Use soon.";
                 }
-                if (daysUntilExpiry <= 3) {
-                        return "This is expiring soon! Try to use.";
+                if (safeDaysUntilExpiry <= 3) {
+                        return "Expires in " + safeDaysUntilExpiry + " days! Prioritize use.";
                 }
-                return "Use this week to avoid waste.";
+                return "Expires in " + safeDaysUntilExpiry + " days. Plan usage.";
         }
 
         private String normalizeComparableUnit(String unit) {

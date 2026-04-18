@@ -34,14 +34,16 @@ public class DatabaseInitializer {
     private static void createTables() {
 
         String createUsersTable = """
-                                    CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT NOT NULL UNIQUE,
-                    password TEXT NOT NULL,
-                    restaurant_id INTEGER NOT NULL UNIQUE,
-                    FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
-                );
-                                """;
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT NOT NULL,
+                        password TEXT NOT NULL,
+                        role TEXT NOT NULL CHECK(role IN ('manager', 'chef')),
+                        restaurant_id INTEGER NOT NULL,
+                        FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+                        UNIQUE(username, restaurant_id)
+                    );
+                """;
 
         String createRecipesTable = """
                 CREATE TABLE IF NOT EXISTS dish_recipes (
@@ -76,18 +78,18 @@ public class DatabaseInitializer {
                 """;
 
         String createInventoryIngredientsTable = """
-            CREATE TABLE IF NOT EXISTS inventory_ingredients (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                quantity REAL NOT NULL,
-                unit TEXT NOT NULL,
-                expiry_date TEXT NOT NULL,
-                low_stock_threshold REAL NOT NULL,
-                discarded INTEGER NOT NULL DEFAULT 0,
-                FOREIGN KEY (tenant_id) REFERENCES restaurants(name) ON DELETE CASCADE
-            );
-            """;
+                CREATE TABLE IF NOT EXISTS inventory_ingredients (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    quantity REAL NOT NULL,
+                    unit TEXT NOT NULL,
+                    expiry_date TEXT NOT NULL,
+                    low_stock_threshold REAL NOT NULL,
+                    discarded INTEGER NOT NULL DEFAULT 0,
+                    FOREIGN KEY (tenant_id) REFERENCES restaurants(name) ON DELETE CASCADE
+                );
+                """;
 
         // Notifications table (Fix 7): durable store for chef/manager alerts
         // so they survive restarts. `dedup_key` carries the same

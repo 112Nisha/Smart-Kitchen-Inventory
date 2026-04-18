@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/styles.css?v=20260405">
 </head>
 <body>
-<div class="app-shell ${empty sessionScope.tenant ? 'no-nav' : ''}">
+<div class="app-shell ${empty sessionScope.username ? 'no-nav' : ''}">
     <header class="top-bar">
         <h1>Smart Kitchen Inventory</h1>
 
@@ -27,14 +27,18 @@
         </c:if>
     </header>
 
-    <c:if test="${not empty sessionScope.tenant}">
+    <c:if test="${not empty sessionScope.username}">
         <nav class="nav-grid">
             <a href="${pageContext.request.contextPath}/dashboard">Dashboard</a>
             <a href="${pageContext.request.contextPath}/inventory">Inventory</a>
             <a href="${pageContext.request.contextPath}/notifications">Expiry Alerts &amp; Notifications</a>
             <a href="${pageContext.request.contextPath}/recommendations">Dish Suggestions</a>
-            <a href="${pageContext.request.contextPath}/shopping-list">Shopping List</a>
+            <c:if test="${sessionScope.role != 'chef'}">
+                <a href="${pageContext.request.contextPath}/shopping-list">Shopping List</a>
+            </c:if>
         </nav>
     </c:if>
+
+    
 
     <main>

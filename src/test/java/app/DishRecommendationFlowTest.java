@@ -93,7 +93,7 @@ class DishRecommendationFlowTest {
         assertTrue(pastaSuggestion.getExpiryRescueScore() > stirFrySuggestion.getExpiryRescueScore());
         assertTrue(pastaSuggestion.getIngredients().stream()
                 .anyMatch(ingredient -> ingredient.isExpiringSoon()
-                        && ingredient.getExpiryHint().toLowerCase().contains("try to use")));
+                        && ingredient.getExpiryHint().toLowerCase().contains("use")));
     }
 
         @Test
