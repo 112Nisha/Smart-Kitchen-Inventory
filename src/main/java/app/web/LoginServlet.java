@@ -24,16 +24,22 @@ public class LoginServlet extends BaseServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String restaurantName = req.getParameter("restaurantName") == null ? ""
-            : req.getParameter("restaurantName").trim();    
+                : req.getParameter("restaurantName").trim();
         String username = req.getParameter("username") == null ? "" : req.getParameter("username").trim();
         String password = req.getParameter("password") == null ? "" : req.getParameter("password").trim();
         HttpSession session = req.getSession();
 
         if (restaurantName.isBlank() || username.isBlank() || password.isBlank()) {
-        session.setAttribute("loginError", "Please fill in all fields.");
-        resp.sendRedirect(req.getContextPath() + "/login");
-        return;
-    }
+            session.setAttribute("loginError", "Please fill in all fields.");
+            resp.sendRedirect(req.getContextPath() + "/login");
+            return;
+        }
+
+        if (!username.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            session.setAttribute("loginError", "Username must be a valid email address.");
+            resp.sendRedirect(req.getContextPath() + "/login");
+            return;
+        }
 
         Optional<UserRepository.LoginResult> loginResult = userRepository.login(username, password, restaurantName);
 
