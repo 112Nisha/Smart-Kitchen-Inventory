@@ -28,7 +28,7 @@
         </div>
 
         <label>Expiry Date</label>
-        <input name="expiryDate" type="date" required>
+        <input name="expiryDate" type="date" min="${today}" required>
 
         <label>Low Stock Threshold</label>
         <input name="lowStockThreshold" type="number" step="0.01" min="0" required>
