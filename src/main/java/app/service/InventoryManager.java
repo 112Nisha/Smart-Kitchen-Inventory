@@ -13,6 +13,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class InventoryManager {
+    private static final double COMPARISON_EPSILON = 1e-9;
+
     private static volatile InventoryManager instance;
 
     private final IngredientRepository ingredientRepository;
@@ -92,7 +94,11 @@ public final class InventoryManager {
 
         Optional<Ingredient> existing = ingredientRepository.findById(tenantId, ingredientId);
         existing.ifPresent(item -> {
-            double updated = roundToTwoDecimals(Math.max(0, item.getQuantity() - usedQuantity));
+            double availableQuantity = item.getQuantity();
+            if (usedQuantity - availableQuantity > COMPARISON_EPSILON) {
+                throw new IllegalArgumentException("Used quantity cannot exceed available inventory");
+            }
+            double updated = roundToTwoDecimals(Math.max(0, availableQuantity - usedQuantity));
             item.setQuantity(updated);
             item.refreshState(LocalDate.now(), nearExpiryDays);
             ingredientRepository.save(item);
