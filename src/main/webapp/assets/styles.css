@@ -310,6 +310,44 @@ form {
     min-width: 122px;
 }
 
+.inventory-edit-toggle {
+    display: inline-block;
+    margin-right: 0.45rem;
+    margin-bottom: 0.35rem;
+}
+
+.inventory-edit-summary {
+    list-style: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ffffff;
+    background: var(--gold);
+    border-radius: var(--radius-sm);
+    padding: 0.72rem 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.2);
+}
+
+.inventory-edit-summary::-webkit-details-marker {
+    display: none;
+}
+
+.inventory-edit-toggle[open] .inventory-edit-summary {
+    background: var(--gold-light);
+}
+
+.inventory-edit-form {
+    margin-top: 0.45rem;
+    padding: 0.55rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+}
+
+.inventory-edit-form input {
+    min-width: 112px;
+}
+
 /* ─── TABLES ─────────────────────────────────────────── */
 .card > table {
     min-width: 100%;
@@ -722,6 +760,15 @@ tbody tr:hover {
     .inline input,
     .inline button {
         width: 100%;
+    }
+
+    .inventory-edit-toggle {
+        width: 100%;
+    }
+
+    .inventory-edit-summary {
+        width: 100%;
+        text-align: center;
     }
 
     .assistant-widget {
