@@ -1,20 +1,6 @@
 package app.web;
 
-import app.model.ExpiryAlertContext;
-import app.service.ExpiryAlertScheduler;
-import app.service.IngredientStateTracker;
-import app.service.StakeholderNotificationHandler;
-import app.model.*;
-import app.repository.InMemoryNotificationStore;
-import app.repository.NotificationStore;
-import app.repository.SqliteNotificationStore;
-import app.service.DashboardNotificationStrategy;
-import app.service.NotificationService;
-import app.service.NotificationStrategy;
-import app.repository.*;
-import app.service.*;
-import app.state.*;
-import app.web.*;
+import app.model.ShoppingListItem;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -36,9 +22,40 @@ public class ShoppingListServlet extends BaseServlet {
             resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
             return;
         }
-        List<Ingredient> items = services().shoppingListService().generateShoppingList(tenantId);
+        List<ShoppingListItem> items = services().shoppingListService().generateShoppingList(tenantId);
         req.setAttribute("tenant", tenantId);
         req.setAttribute("items", items);
         req.getRequestDispatcher("/WEB-INF/views/shopping-list.jsp").forward(req, resp);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String tenantId = loggedInTenant(req);
+        if (tenantId == null) {
+            resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
+            return;
+        }
+
+        String action = req.getParameter("action");
+        String ingredientId = req.getParameter("ingredientId");
+
+        try {
+            if (ingredientId == null || ingredientId.isBlank()) {
+                throw new IllegalArgumentException("ingredientId is required");
+            }
+
+            switch (action) {
+                case "mark-purchased" -> services().shoppingListService().markPurchased(tenantId, ingredientId);
+                case "mark-ignored" -> services().shoppingListService().markIgnored(tenantId, ingredientId);
+                case "reset" -> services().shoppingListService().resetItem(tenantId, ingredientId);
+                default -> throw new IllegalArgumentException("Unknown action: " + (action == null ? "<null>" : action));
+            }
+        } catch (RuntimeException ex) {
+            String errorMessage = ex.getMessage() == null ? "Request failed" : ex.getMessage();
+            resp.sendRedirect(req.getContextPath() + "/shopping-list?error=" + encodeQueryParam(errorMessage));
+            return;
+        }
+
+        resp.sendRedirect(req.getContextPath() + "/shopping-list");
     }
 }

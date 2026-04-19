@@ -14,7 +14,9 @@ import app.service.NotificationService;
 import app.repository.SqliteNotificationStore;
 import app.repository.DishRepository;
 import app.repository.IngredientRepository;
+import app.repository.ShoppingListRepository;
 import app.repository.SqliteIngredientRepository;
+import app.repository.SqliteShoppingListRepository;
 import app.service.DishRecommendationService;
 import app.service.ExpiryAlertService;
 import app.service.InventoryManager;
@@ -69,7 +71,13 @@ public class AppContextListener implements ServletContextListener {
         expiryAlertService.attachLifecycleListeners();
         inventoryManager.addListener(new RoleNotificationListener(notificationService));
 
-        ShoppingListService shoppingListService = new ShoppingListService(inventoryManager);
+        // Create shopping list service with repository
+        ShoppingListRepository shoppingListRepository = new SqliteShoppingListRepository();
+        ShoppingListService shoppingListService = new ShoppingListService(inventoryManager, shoppingListRepository);
+
+        // Register shopping list service as an observer of inventory changes
+        inventoryManager.addInventoryObserver(shoppingListService);
+
         DishRecommendationService recommendationService = new DishRecommendationService(inventoryManager, new DishRepository(), notificationService);
         WasteImpactService wasteImpactService = new WasteImpactService();
         NavigationAssistantService navigationAssistantService = new NavigationAssistantService();

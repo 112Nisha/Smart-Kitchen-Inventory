@@ -41,7 +41,7 @@ class ExpiryAlertFlowTest {
         alertService.evaluateAndNotify("tenant-alert");
 
         boolean stakeholderMessageSent = store.all().stream()
-                .anyMatch(msg -> msg.getRecipientRole().equals(StakeholderNotificationHandler.ROLE));
+                .anyMatch(msg -> msg.getRecipientRole().equals("CHEF") || msg.getRecipientRole().equals("MANAGER"));
         assertTrue(stakeholderMessageSent);
     }
 

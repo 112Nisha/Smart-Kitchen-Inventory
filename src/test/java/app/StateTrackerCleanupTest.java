@@ -1,6 +1,7 @@
 package app;
 
 import app.model.Ingredient;
+import app.model.IngredientEvent;
 import app.repository.IngredientRepository;
 import app.service.InventoryManager;
 import org.junit.jupiter.api.AfterEach;
@@ -10,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -40,8 +40,13 @@ class StateTrackerCleanupTest {
 
     private List<String> captureRemovals() {
         List<String> removed = new ArrayList<>();
-        Consumer<String> listener = removed::add;
-        manager.addIngredientRemovedListener(listener);
+        manager.addListener(event -> {
+            if (event instanceof IngredientEvent.Discarded d) {
+                removed.add(d.ingredient().getId());
+            } else if (event instanceof IngredientEvent.ConsumedToZero c) {
+                removed.add(c.ingredient().getId());
+            }
+        });
         return removed;
     }
 
@@ -106,8 +111,11 @@ class StateTrackerCleanupTest {
         // fireIngredientRemoved swallows runtime exceptions so a buggy listener
         // can't poison other subscribers or bubble out of a routine discard.
         List<String> captured = new ArrayList<>();
-        manager.addIngredientRemovedListener(id -> { throw new RuntimeException("first listener fails"); });
-        manager.addIngredientRemovedListener(captured::add);
+        manager.addListener(event -> { throw new RuntimeException("first listener fails"); });
+        manager.addListener(event -> {
+            if (event instanceof IngredientEvent.Discarded d) captured.add(d.ingredient().getId());
+            else if (event instanceof IngredientEvent.ConsumedToZero c) captured.add(c.ingredient().getId());
+        });
 
         Ingredient tomato = manager.addIngredient(
                 new Ingredient("t", "Tomato", 1.0, "kg", LocalDate.now().plusDays(2), 1.0)
@@ -123,7 +131,7 @@ class StateTrackerCleanupTest {
     @Test
     void addIngredientRemovedListenerRejectsNull() {
         try {
-            manager.addIngredientRemovedListener(null);
+            manager.addListener(null);
             assertFalse(true, "expected NullPointerException for null listener");
         } catch (NullPointerException expected) {
             // good
@@ -134,8 +142,14 @@ class StateTrackerCleanupTest {
     void multipleListenersAreAllInvoked() {
         List<String> a = new ArrayList<>();
         List<String> b = new ArrayList<>();
-        manager.addIngredientRemovedListener(a::add);
-        manager.addIngredientRemovedListener(b::add);
+        manager.addListener(event -> {
+            if (event instanceof IngredientEvent.Discarded d) a.add(d.ingredient().getId());
+            else if (event instanceof IngredientEvent.ConsumedToZero c) a.add(c.ingredient().getId());
+        });
+        manager.addListener(event -> {
+            if (event instanceof IngredientEvent.Discarded d) b.add(d.ingredient().getId());
+            else if (event instanceof IngredientEvent.ConsumedToZero c) b.add(c.ingredient().getId());
+        });
 
         Ingredient tomato = manager.addIngredient(
                 new Ingredient("t", "Tomato", 1.0, "kg", LocalDate.now().plusDays(2), 1.0)

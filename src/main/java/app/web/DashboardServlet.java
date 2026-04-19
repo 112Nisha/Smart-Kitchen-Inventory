@@ -3,6 +3,7 @@ package app.web;
 import app.model.Ingredient;
 import app.model.IngredientLifecycle;
 import app.model.NotificationMessage;
+import app.model.ShoppingListItem;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -25,7 +26,7 @@ public class DashboardServlet extends BaseServlet {
                                 .filter(ingredient -> !ingredient.isDiscarded())
                                 .filter(ingredient -> ingredient.getQuantity() > 1e-9)
                                 .toList();
-                List<Ingredient> shoppingList = services().shoppingListService().generateShoppingList(tenantId);
+                List<ShoppingListItem> shoppingList = services().shoppingListService().generateShoppingList(tenantId);
                 List<NotificationMessage> notifications = services().notificationStore().all().stream()
                                 .filter(item -> item.getTenantId().equals(tenantId))
                                 .toList();

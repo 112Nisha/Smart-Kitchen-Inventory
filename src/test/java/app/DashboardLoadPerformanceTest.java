@@ -2,8 +2,10 @@ package app;
 
 import app.model.Ingredient;
 import app.model.NotificationMessage;
+import app.model.ShoppingItemStatus;
 import app.repository.InMemoryNotificationStore;
 import app.repository.IngredientRepository;
+import app.repository.ShoppingListRepository;
 import app.service.InventoryManager;
 import app.service.ShoppingListService;
 import app.web.AppServices;
@@ -20,6 +22,7 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
@@ -40,7 +43,23 @@ class DashboardLoadPerformanceTest {
         String tenant = "tenant-dashboard-performance";
         DelayedIngredientRepository repository = new DelayedIngredientRepository(Duration.ofMillis(1400));
         InventoryManager manager = InventoryManager.getInstance(repository, 3);
-        ShoppingListService shoppingListService = new ShoppingListService(manager);
+
+        // Mock repository for shopping list (not used in this test, just needed for constructor)
+        ShoppingListRepository mockShoppingRepo = new ShoppingListRepository() {
+            @Override
+            public void saveStatus(String tenantId, String ingredientId, ShoppingItemStatus status) {}
+
+            @Override
+            public Optional<ShoppingItemStatus> findStatus(String tenantId, String ingredientId) {
+                return Optional.empty();
+            }
+
+            @Override
+            public void deleteStatus(String tenantId, String ingredientId) {}
+        };
+
+        ShoppingListService shoppingListService = new ShoppingListService(manager, mockShoppingRepo);
+        manager.addInventoryObserver(shoppingListService);
         InMemoryNotificationStore notificationStore = new InMemoryNotificationStore();
 
         seedIngredients(manager, tenant, 600);

@@ -1,5 +1,6 @@
 package app.service;
 
+import app.alerts.InventoryChangeObserver;
 import app.model.Ingredient;
 import app.model.IngredientEvent;
 import app.repository.IngredientRepository;
@@ -7,6 +8,7 @@ import app.repository.IngredientRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,6 +36,7 @@ public final class InventoryManager {
     // lock-free under concurrent read/write, which is fine given listeners
     // register once at startup.
     private final List<IngredientEventListener> eventListeners = new CopyOnWriteArrayList<>();
+    private final List<InventoryChangeObserver> inventoryObservers = new ArrayList<>();
 
     private InventoryManager(IngredientRepository ingredientRepository, IntSupplier nearExpiryDays) {
         this.ingredientRepository = ingredientRepository;
@@ -75,6 +78,23 @@ public final class InventoryManager {
         return instance;
     }
 
+    /**
+     * Register an observer to be notified when any ingredient changes.
+     * @param observer the observer to add
+     */
+    public void addInventoryObserver(InventoryChangeObserver observer) {
+        Objects.requireNonNull(observer, "observer is required");
+        inventoryObservers.add(observer);
+    }
+
+    /**
+     * Notify all registered observers that inventory has changed for a tenant.
+     * @param tenantId the tenant whose inventory changed
+     */
+    private void notifyInventoryObservers(String tenantId) {
+        inventoryObservers.forEach(observer -> observer.onInventoryChanged(tenantId));
+    }
+
     public Ingredient addIngredient(Ingredient ingredient) {
         validateTenantId(Objects.requireNonNull(ingredient, "ingredient is required").getTenantId());
         validateIngredient(ingredient);
@@ -82,6 +102,7 @@ public final class InventoryManager {
         ingredient.setLowStockThreshold(roundToTwoDecimals(ingredient.getLowStockThreshold()));
         Ingredient saved = ingredientRepository.save(ingredient);
         invalidateTenantCache(ingredient.getTenantId());
+        notifyInventoryObservers(ingredient.getTenantId());
         return saved;
     }
 
@@ -108,6 +129,7 @@ public final class InventoryManager {
             item.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
             ingredientRepository.save(item);
             invalidateTenantCache(tenantId);
+            notifyInventoryObservers(tenantId);
         });
         return existing;
     }
@@ -144,6 +166,7 @@ public final class InventoryManager {
             if (updated <= COMPARISON_EPSILON) {
                 fireEvent(new IngredientEvent.ConsumedToZero(item));
             }
+            notifyInventoryObservers(tenantId);
         });
         return existing;
     }
@@ -159,6 +182,7 @@ public final class InventoryManager {
             ingredientRepository.save(item);
             invalidateTenantCache(tenantId);
             fireEvent(new IngredientEvent.Discarded(item));
+            notifyInventoryObservers(tenantId);
         });
         return existing;
     }

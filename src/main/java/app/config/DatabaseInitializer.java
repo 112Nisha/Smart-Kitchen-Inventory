@@ -122,6 +122,18 @@ public class DatabaseInitializer {
             );
             """;
 
+        String createShoppingListItemsTable = """
+                CREATE TABLE IF NOT EXISTS shopping_list_items (
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    ingredient_id TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'PENDING',
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(tenant_id, ingredient_id),
+                    FOREIGN KEY (tenant_id) REFERENCES restaurants(name) ON DELETE CASCADE
+                );
+                """;
+
         try (Connection conn = DriverManager.getConnection(URL);
                 Statement stmt = conn.createStatement()) {
 
@@ -133,6 +145,7 @@ public class DatabaseInitializer {
             stmt.execute(createInventoryIngredientsTable);
             stmt.execute(createNotificationsTable);
             stmt.execute(createAppConfigTable);
+            stmt.execute(createShoppingListItemsTable);
 
         } catch (SQLException e) {
             throw new RuntimeException("Failed to create database tables", e);
