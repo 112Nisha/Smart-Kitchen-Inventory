@@ -36,6 +36,12 @@ public class RegisterServlet extends BaseServlet {
             return;
         }
 
+        if (!username.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            session.setAttribute("registerError", "Username must be a valid email address.");
+            resp.sendRedirect(req.getContextPath() + "/register");
+            return;
+        }
+
         if (userRepository.usernameExists(username, restaurantName)) {
             session.setAttribute("registerError", "Username already exists for this restaurant.");
             resp.sendRedirect(req.getContextPath() + "/register");
