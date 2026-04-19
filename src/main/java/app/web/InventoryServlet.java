@@ -24,6 +24,7 @@ public class InventoryServlet extends BaseServlet {
             return;
         }
         List<Ingredient> ingredients = services().inventoryManager().listIngredients(tenantId).stream()
+            .filter(ingredient -> !ingredient.isDiscarded())
             .filter(ingredient -> ingredient.getQuantity() > 1e-9)
             .toList();
         req.setAttribute("tenant", tenantId);

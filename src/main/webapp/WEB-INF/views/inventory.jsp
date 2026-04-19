@@ -59,13 +59,20 @@
                 <td>${item.lifecycle}</td>
                 <td><fmt:formatNumber value="${item.lowStockThreshold}" minFractionDigits="2" maxFractionDigits="2"/></td>
                 <td>
-                    <form class="inline" method="post" action="${pageContext.request.contextPath}/inventory">
-                        <input type="hidden" name="action" value="use">
-                        <input type="hidden" name="tenant" value="${tenant}">
-                        <input type="hidden" name="id" value="${item.id}">
-                        <input name="usedQuantity" type="number" step="0.01" min="0.01" placeholder="Qty used" required>
-                        <button type="submit">Use</button>
-                    </form>
+                    <c:choose>
+                        <c:when test="${item.lifecycle == 'EXPIRED'}">
+                            <span class="ingredient-expiry-tip">Expired items can only be discarded.</span>
+                        </c:when>
+                        <c:otherwise>
+                            <form class="inline" method="post" action="${pageContext.request.contextPath}/inventory">
+                                <input type="hidden" name="action" value="use">
+                                <input type="hidden" name="tenant" value="${tenant}">
+                                <input type="hidden" name="id" value="${item.id}">
+                                <input name="usedQuantity" type="number" step="0.01" min="0.01" max="${item.quantity}" placeholder="Qty used" required>
+                                <button type="submit">Use</button>
+                            </form>
+                        </c:otherwise>
+                    </c:choose>
                     <form class="inline" method="post" action="${pageContext.request.contextPath}/inventory">
                         <input type="hidden" name="action" value="discard">
                         <input type="hidden" name="tenant" value="${tenant}">

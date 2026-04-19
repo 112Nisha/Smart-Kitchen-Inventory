@@ -1,6 +1,7 @@
 package app;
 
 import app.model.Ingredient;
+import app.model.IngredientLifecycle;
 import app.repository.IngredientRepository;
 import app.service.InventoryManager;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class InventoryManagerRobustnessTest {
     @Test
@@ -44,6 +46,54 @@ class InventoryManagerRobustnessTest {
 
         Ingredient persisted = manager.findById("tenant-robust", ingredient.getId()).orElseThrow();
         assertEquals(5.0, persisted.getQuantity(), 1e-9);
+    }
+
+    @Test
+    void useIngredientToZeroRemovesIngredientFromInventory() {
+        InventoryManager.resetInstanceForTests();
+        IngredientRepository repository = new IngredientRepository();
+        InventoryManager manager = InventoryManager.getInstance(repository, 3);
+
+        Ingredient ingredient = new Ingredient("tenant-robust", "Spinach", 1.0, "kg", LocalDate.now().plusDays(2), 0.2);
+        manager.addIngredient(ingredient);
+
+        manager.useIngredient("tenant-robust", ingredient.getId(), 1.0);
+
+        assertTrue(manager.findById("tenant-robust", ingredient.getId()).isEmpty());
+        assertTrue(manager.listIngredients("tenant-robust").isEmpty());
+    }
+
+    @Test
+    void discardIngredientRemovesIngredientFromInventory() {
+        InventoryManager.resetInstanceForTests();
+        IngredientRepository repository = new IngredientRepository();
+        InventoryManager manager = InventoryManager.getInstance(repository, 3);
+
+        Ingredient ingredient = new Ingredient("tenant-robust", "Cucumber", 2.0, "kg", LocalDate.now().plusDays(2), 0.5);
+        manager.addIngredient(ingredient);
+
+        manager.discardIngredient("tenant-robust", ingredient.getId());
+
+        assertTrue(manager.findById("tenant-robust", ingredient.getId()).isEmpty());
+        assertTrue(manager.listIngredients("tenant-robust").isEmpty());
+    }
+
+    @Test
+    void useIngredientRejectsExpiredIngredient() {
+        InventoryManager.resetInstanceForTests();
+        IngredientRepository repository = new IngredientRepository();
+        InventoryManager manager = InventoryManager.getInstance(repository, 3);
+
+        Ingredient ingredient = new Ingredient("tenant-robust", "Lettuce", 2.0, "kg", LocalDate.now().minusDays(1), 0.5);
+        manager.addIngredient(ingredient);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> manager.useIngredient("tenant-robust", ingredient.getId(), 1.0));
+        assertEquals("Expired ingredients can only be discarded", ex.getMessage());
+
+        Ingredient persisted = manager.findById("tenant-robust", ingredient.getId()).orElseThrow();
+        assertEquals(2.0, persisted.getQuantity(), 1e-9);
+        assertEquals(IngredientLifecycle.EXPIRED, persisted.getLifecycle());
     }
 
     @Test

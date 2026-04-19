@@ -94,14 +94,24 @@ public final class InventoryManager {
 
         Optional<Ingredient> existing = ingredientRepository.findById(tenantId, ingredientId);
         existing.ifPresent(item -> {
+            item.refreshState(LocalDate.now(), nearExpiryDays);
+            if (item.getLifecycle() == app.model.IngredientLifecycle.EXPIRED) {
+                throw new IllegalArgumentException("Expired ingredients can only be discarded");
+            }
+
             double availableQuantity = item.getQuantity();
             if (usedQuantity - availableQuantity > COMPARISON_EPSILON) {
                 throw new IllegalArgumentException("Used quantity cannot exceed available inventory");
             }
             double updated = roundToTwoDecimals(Math.max(0, availableQuantity - usedQuantity));
-            item.setQuantity(updated);
-            item.refreshState(LocalDate.now(), nearExpiryDays);
-            ingredientRepository.save(item);
+
+            if (updated <= COMPARISON_EPSILON) {
+                ingredientRepository.deleteById(tenantId, ingredientId);
+            } else {
+                item.setQuantity(updated);
+                item.refreshState(LocalDate.now(), nearExpiryDays);
+                ingredientRepository.save(item);
+            }
             invalidateTenantCache(tenantId);
         });
         return existing;
@@ -113,9 +123,7 @@ public final class InventoryManager {
 
         Optional<Ingredient> existing = ingredientRepository.findById(tenantId, ingredientId);
         existing.ifPresent(item -> {
-            item.setDiscarded(true);
-            item.refreshState(LocalDate.now(), nearExpiryDays);
-            ingredientRepository.save(item);
+            ingredientRepository.deleteById(tenantId, ingredientId);
             invalidateTenantCache(tenantId);
         });
         return existing;
