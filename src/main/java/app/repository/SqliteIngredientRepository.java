@@ -52,11 +52,13 @@ public class SqliteIngredientRepository extends IngredientRepository {
             ORDER BY name COLLATE NOCASE, expiry_date
             """;
 
-    // Used by the scheduled alert runner to enumerate tenants without needing
-    // to know the full ingredient set. DISTINCT keeps the result small even
-    // when a tenant has hundreds of rows.
     private static final String FIND_ALL_TENANTS_SQL = """
             SELECT DISTINCT tenant_id FROM inventory_ingredients
+            """;
+
+    private static final String DELETE_BY_ID_SQL = """
+            DELETE FROM inventory_ingredients
+            WHERE tenant_id = ? AND id = ?
             """;
 
     public SqliteIngredientRepository() {
@@ -132,9 +134,6 @@ public class SqliteIngredientRepository extends IngredientRepository {
 
     @Override
     public Set<String> findAllTenantIds() {
-        // Query the DB directly rather than delegating to the in-memory parent
-        // implementation — the parent's map is never populated in the SQLite
-        // variant, so relying on it would always return an empty set.
         Set<String> tenantIds = new HashSet<>();
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
              PreparedStatement stmt = conn.prepareStatement(FIND_ALL_TENANTS_SQL);
@@ -147,6 +146,20 @@ public class SqliteIngredientRepository extends IngredientRepository {
             throw new RuntimeException("Failed to enumerate tenant ids", e);
         }
         return Set.copyOf(tenantIds);
+    }
+
+    @Override
+    public boolean deleteById(String tenantId, String ingredientId) {
+        try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
+             PreparedStatement stmt = conn.prepareStatement(DELETE_BY_ID_SQL)) {
+
+            enableForeignKeys(conn);
+            stmt.setString(1, tenantId);
+            stmt.setString(2, ingredientId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to delete ingredient", e);
+        }
     }
 
     private Ingredient mapRow(ResultSet rs) throws SQLException {

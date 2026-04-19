@@ -17,6 +17,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.IntSupplier;
 
 public final class InventoryManager {
+    private static final double COMPARISON_EPSILON = 1e-9;
+
     private static volatile InventoryManager instance;
 
     private final IngredientRepository ingredientRepository;
@@ -119,13 +121,27 @@ public final class InventoryManager {
 
         Optional<Ingredient> existing = ingredientRepository.findById(tenantId, ingredientId);
         existing.ifPresent(item -> {
-            double updated = roundToTwoDecimals(Math.max(0, item.getQuantity() - usedQuantity));
-            item.setQuantity(updated);
             item.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
-            ingredientRepository.save(item);
+            if (item.getLifecycle() == app.model.IngredientLifecycle.EXPIRED) {
+                throw new IllegalArgumentException("Expired ingredients can only be discarded");
+            }
+
+            double availableQuantity = item.getQuantity();
+            if (usedQuantity - availableQuantity > COMPARISON_EPSILON) {
+                throw new IllegalArgumentException("Used quantity cannot exceed available inventory");
+            }
+            double updated = roundToTwoDecimals(Math.max(0, availableQuantity - usedQuantity));
+
+            if (updated <= COMPARISON_EPSILON) {
+                ingredientRepository.deleteById(tenantId, ingredientId);
+            } else {
+                item.setQuantity(updated);
+                item.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
+                ingredientRepository.save(item);
+            }
             invalidateTenantCache(tenantId);
             fireEvent(new IngredientEvent.Used(item, usedQuantity));
-            if (updated == 0.0) {
+            if (updated <= COMPARISON_EPSILON) {
                 fireEvent(new IngredientEvent.ConsumedToZero(item));
             }
         });

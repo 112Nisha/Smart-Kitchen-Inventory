@@ -36,4 +36,17 @@ public class IngredientRepository {
                 .map(Ingredient::copy)
                 .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
     }
+
+    public boolean deleteById(String tenantId, String ingredientId) {
+        Map<String, Ingredient> tenantInventory = byTenant.get(tenantId);
+        if (tenantInventory == null) {
+            return false;
+        }
+
+        boolean removed = tenantInventory.remove(ingredientId) != null;
+        if (tenantInventory.isEmpty()) {
+            byTenant.remove(tenantId, tenantInventory);
+        }
+        return removed;
+    }
 }
