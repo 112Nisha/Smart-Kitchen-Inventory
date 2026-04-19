@@ -19,22 +19,22 @@
         <url-pattern>/inventory</url-pattern>
     </servlet-mapping>
 
-    <servlet>
-        <servlet-name>expiryServlet</servlet-name>
-        <servlet-class>app.web.ExpiryServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>expiryServlet</servlet-name>
-        <url-pattern>/expiry-alerts</url-pattern>
-    </servlet-mapping>
-
-    <servlet>
+<servlet>
         <servlet-name>shoppingListServlet</servlet-name>
         <servlet-class>app.web.ShoppingListServlet</servlet-class>
     </servlet>
     <servlet-mapping>
         <servlet-name>shoppingListServlet</servlet-name>
         <url-pattern>/shopping-list</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>notificationsServlet</servlet-name>
+        <servlet-class>app.web.NotificationsServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>notificationsServlet</servlet-name>
+        <url-pattern>/notifications</url-pattern>
     </servlet-mapping>
 
     <servlet>

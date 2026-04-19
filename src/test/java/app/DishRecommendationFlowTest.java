@@ -1,19 +1,12 @@
 package app;
 
-import app.alerts.AlertEventBus;
-import app.alerts.AlertHandler;
-import app.alerts.ChefNotificationHandler;
-import app.alerts.ChefObserver;
-import app.alerts.ExpiryAlertContext;
-import app.alerts.ExpiryCheckHandler;
-import app.alerts.ManagerNotificationHandler;
-import app.alerts.ManagerObserver;
-import app.alerts.UrgencyFlagHandler;
+import app.model.ExpiryAlertContext;
+import app.service.StakeholderNotificationHandler;
 import app.model.DishRecipe;
 import app.model.Ingredient;
-import app.notification.EmailNotificationStrategy;
-import app.notification.InMemoryNotificationStore;
-import app.notification.NotificationService;
+import app.service.DashboardNotificationStrategy;
+import app.repository.InMemoryNotificationStore;
+import app.service.NotificationService;
 import app.repository.DishRepository;
 import app.repository.IngredientRepository;
 import app.service.DishRecommendationService;
@@ -122,19 +115,11 @@ class DishRecommendationFlowTest {
 
                 InMemoryNotificationStore store = new InMemoryNotificationStore();
                 NotificationService notificationService = new NotificationService(2);
-                notificationService.registerStrategy(new EmailNotificationStrategy(store));
+                notificationService.registerStrategy(new DashboardNotificationStrategy(store));
 
-                AlertHandler expiryCheck = new ExpiryCheckHandler(3);
-                AlertHandler urgency = new UrgencyFlagHandler(20);
-                AlertHandler chef = new ChefNotificationHandler(notificationService);
-                AlertHandler managerNotify = new ManagerNotificationHandler(notificationService);
-                expiryCheck.setNext(urgency).setNext(chef).setNext(managerNotify);
+                StakeholderNotificationHandler stakeholder = new StakeholderNotificationHandler(notificationService);
 
-                AlertEventBus eventBus = new AlertEventBus();
-                eventBus.subscribe(new ChefObserver());
-                eventBus.subscribe(new ManagerObserver());
-
-                ExpiryAlertService alertService = new ExpiryAlertService(inventoryManager, expiryCheck, eventBus);
+                ExpiryAlertService alertService = new ExpiryAlertService(inventoryManager, stakeholder);
                 List<ExpiryAlertContext> alerts = alertService.evaluateAndNotify(tenant);
 
                 assertTrue(alerts.isEmpty());

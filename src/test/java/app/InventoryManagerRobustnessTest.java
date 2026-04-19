@@ -149,7 +149,10 @@ class InventoryManagerRobustnessTest {
 
         assertSame(first, second);
         assertThrows(IllegalStateException.class, () -> InventoryManager.getInstance(repoB, 3));
-        assertThrows(IllegalStateException.class, () -> InventoryManager.getInstance(repoA, 5));
+        // Bundle 3: nearExpiryDays is now a live-reloadable IntSupplier, so a
+        // different window on re-init is no longer an error — only repository
+        // identity mismatches are rejected.
+        assertSame(first, InventoryManager.getInstance(repoA, 5));
     }
 
     @Test

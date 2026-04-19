@@ -1,17 +1,17 @@
 package app.web;
 
-import app.alerts.AlertEventBus;
-import app.alerts.AlertHandler;
-import app.alerts.ChefNotificationHandler;
-import app.alerts.ChefObserver;
-import app.alerts.ExpiryCheckHandler;
-import app.alerts.ManagerNotificationHandler;
-import app.alerts.ManagerObserver;
-import app.alerts.UrgencyFlagHandler;
+import app.service.ExpiryAlertScheduler;
+import app.service.StakeholderNotificationHandler;
+import app.config.AlertConfigService;
 import app.model.Ingredient;
-import app.notification.EmailNotificationStrategy;
-import app.notification.InMemoryNotificationStore;
-import app.notification.NotificationService;
+import app.service.DashboardNotificationStrategy;
+import app.service.EmailNotificationStrategy;
+import app.service.LowStockAlertService;
+import app.service.RoleNotificationListener;
+import app.service.TrackerCleanupListener;
+import app.repository.NotificationStore;
+import app.service.NotificationService;
+import app.repository.SqliteNotificationStore;
 import app.repository.DishRepository;
 import app.repository.IngredientRepository;
 import app.repository.SqliteIngredientRepository;
@@ -30,35 +30,47 @@ import javax.servlet.annotation.WebListener;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @WebListener
 public class AppContextListener implements ServletContextListener {
     public static final String APP_SERVICES_KEY = "appServices";
 
+    // Held as a field so contextDestroyed() can stop the background sweep
+    // cleanly. Null until contextInitialized has run.
+    private ExpiryAlertScheduler expiryAlertScheduler;
+
     @Override
     public void contextInitialized(ServletContextEvent sce) {
+        // Bundle 3: AlertConfigService owns the live-reloadable thresholds
+        // (near-expiry, retention). Initialised first so every downstream
+        // consumer can wire a supplier against its cache.
+        AlertConfigService alertConfigService = new AlertConfigService();
+
         IngredientRepository ingredientRepository = new SqliteIngredientRepository();
-        InventoryManager inventoryManager = InventoryManager.getInstance(ingredientRepository, 3);
+        InventoryManager inventoryManager = InventoryManager.getInstance(
+                ingredientRepository,
+                () -> alertConfigService.get().nearExpiryDays());
 
         seedData(inventoryManager);
 
-        InMemoryNotificationStore notificationStore = new InMemoryNotificationStore();
+        // Fix 7: durable SQLite-backed store replaces the in-memory list so
+        // notifications (and their dedup state) survive container restarts.
+        // The interface type lets tests keep using InMemoryNotificationStore
+        // without bringing the DB file into scope.
+        NotificationStore notificationStore = new SqliteNotificationStore();
         NotificationService notificationService = new NotificationService(3);
-        notificationService.registerStrategy(new EmailNotificationStrategy(notificationStore));
+        notificationService.registerStrategy(new DashboardNotificationStrategy(notificationStore));
+        notificationService.registerStrategy(new EmailNotificationStrategy("localhost", 25, "noreply@kitchen.local"));
 
-        AlertHandler expiryCheck = new ExpiryCheckHandler(3);
-        AlertHandler urgencyFlag = new UrgencyFlagHandler(20);
-        AlertHandler chefNotify = new ChefNotificationHandler(notificationService);
-        AlertHandler managerNotify = new ManagerNotificationHandler(notificationService);
-        expiryCheck.setNext(urgencyFlag).setNext(chefNotify).setNext(managerNotify);
+        StakeholderNotificationHandler stakeholderNotify = new StakeholderNotificationHandler(notificationService);
 
-        AlertEventBus eventBus = new AlertEventBus();
-        eventBus.subscribe(new ChefObserver());
-        eventBus.subscribe(new ManagerObserver());
+        ExpiryAlertService expiryAlertService = new ExpiryAlertService(inventoryManager, stakeholderNotify);
+        expiryAlertService.attachLifecycleListeners();
+        inventoryManager.addListener(new RoleNotificationListener(notificationService));
 
-        ExpiryAlertService expiryAlertService = new ExpiryAlertService(inventoryManager, expiryCheck, eventBus);
         ShoppingListService shoppingListService = new ShoppingListService(inventoryManager);
-        DishRecommendationService recommendationService = new DishRecommendationService(inventoryManager, new DishRepository());
+        DishRecommendationService recommendationService = new DishRecommendationService(inventoryManager, new DishRepository(), notificationService);
         WasteImpactService wasteImpactService = new WasteImpactService();
         NavigationAssistantService navigationAssistantService = new NavigationAssistantService();
 
@@ -68,17 +80,54 @@ public class AppContextListener implements ServletContextListener {
                 shoppingListService,
                 recommendationService,
                 wasteImpactService,
-            navigationAssistantService,
-                notificationStore
+                navigationAssistantService,
+                notificationStore,
+                alertConfigService
         );
 
         ServletContext context = sce.getServletContext();
         context.setAttribute(APP_SERVICES_KEY, appServices);
+
+        // Sweep runs once per day — expiry thresholds are day-level so more
+        // frequent checks add no value. Override via system property
+        // `expiry.alert.interval.seconds` for testing without waiting 24h.
+        long intervalSeconds = readIntervalSecondsFromProperty(86400L);
+        expiryAlertScheduler = new ExpiryAlertScheduler(
+                expiryAlertService,
+                intervalSeconds,
+                intervalSeconds,
+                TimeUnit.SECONDS,
+                notificationStore,
+                (java.util.function.IntSupplier) () -> alertConfigService.get().retentionDays());
+        LowStockAlertService lowStockAlertService = new LowStockAlertService(inventoryManager, notificationService);
+        expiryAlertScheduler.setLowStockAlertService(lowStockAlertService);
+        expiryAlertScheduler.start();
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
+        // Stop the background sweep BEFORE resetting the singleton so any
+        // in-flight tick completes against a still-valid InventoryManager.
+        if (expiryAlertScheduler != null) {
+            expiryAlertScheduler.stop();
+        }
         InventoryManager.resetInstanceForTests();
+    }
+
+    // Parses the interval from a system property, falling back to the default
+    // if unset or malformed. Kept lenient on purpose — a bad value should
+    // degrade to the default rather than refuse to boot the app.
+    private long readIntervalSecondsFromProperty(long defaultSeconds) {
+        String raw = System.getProperty("expiry.alert.interval.seconds");
+        if (raw == null || raw.isBlank()) {
+            return defaultSeconds;
+        }
+        try {
+            long parsed = Long.parseLong(raw.trim());
+            return parsed > 0 ? parsed : defaultSeconds;
+        } catch (NumberFormatException ex) {
+            return defaultSeconds;
+        }
     }
 
     private void seedData(InventoryManager inventoryManager) {

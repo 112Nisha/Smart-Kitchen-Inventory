@@ -1,7 +1,7 @@
 package app;
 
 import app.model.NotificationMessage;
-import app.notification.NotificationService;
+import app.service.NotificationService;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,7 +16,7 @@ class NotificationServiceResilienceTest {
         NotificationService service = new NotificationService(2);
 
         assertThrows(IllegalStateException.class,
-                () -> service.sendWithRetry(new NotificationMessage("tenant-a", "CHEF", "Sub", "Body")));
+                () -> service.sendWithRetry(new NotificationMessage("tenant-a", "ing-1", "CHEF", "Sub", "Body")));
     }
 
     @Test
@@ -29,13 +29,13 @@ class NotificationServiceResilienceTest {
         });
         service.registerStrategy(message -> successfulDeliveries.incrementAndGet());
 
-        assertDoesNotThrow(() -> service.sendWithRetry(new NotificationMessage("tenant-a", "CHEF", "Sub", "Body")));
+        assertDoesNotThrow(() -> service.sendWithRetry(new NotificationMessage("tenant-a", "ing-1", "CHEF", "Sub", "Body")));
         assertThrows(RuntimeException.class, () -> {
             NotificationService allFail = new NotificationService(1);
             allFail.registerStrategy(message -> {
                 throw new RuntimeException("all failed");
             });
-            allFail.sendWithRetry(new NotificationMessage("tenant-a", "CHEF", "Sub", "Body"));
+            allFail.sendWithRetry(new NotificationMessage("tenant-a", "ing-1", "CHEF", "Sub", "Body"));
         });
         assertEquals(1, successfulDeliveries.get());
     }

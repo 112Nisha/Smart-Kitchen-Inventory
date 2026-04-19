@@ -12,8 +12,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class SqliteIngredientRepository extends IngredientRepository {
     private static final String UPSERT_SQL = """
@@ -48,6 +50,10 @@ public class SqliteIngredientRepository extends IngredientRepository {
             FROM inventory_ingredients
             WHERE tenant_id = ?
             ORDER BY name COLLATE NOCASE, expiry_date
+            """;
+
+    private static final String FIND_ALL_TENANTS_SQL = """
+            SELECT DISTINCT tenant_id FROM inventory_ingredients
             """;
 
     private static final String DELETE_BY_ID_SQL = """
@@ -124,6 +130,22 @@ public class SqliteIngredientRepository extends IngredientRepository {
         }
 
         return ingredients;
+    }
+
+    @Override
+    public Set<String> findAllTenantIds() {
+        Set<String> tenantIds = new HashSet<>();
+        try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
+             PreparedStatement stmt = conn.prepareStatement(FIND_ALL_TENANTS_SQL);
+             ResultSet rs = stmt.executeQuery()) {
+            enableForeignKeys(conn);
+            while (rs.next()) {
+                tenantIds.add(rs.getString("tenant_id"));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to enumerate tenant ids", e);
+        }
+        return Set.copyOf(tenantIds);
     }
 
     @Override

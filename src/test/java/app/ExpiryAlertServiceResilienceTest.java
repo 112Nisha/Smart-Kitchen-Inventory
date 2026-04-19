@@ -1,12 +1,9 @@
 package app;
 
-import app.alerts.AlertEventBus;
-import app.alerts.AlertHandler;
-import app.alerts.ChefNotificationHandler;
-import app.alerts.ExpiryAlertContext;
-import app.alerts.ExpiryCheckHandler;
+import app.model.ExpiryAlertContext;
+import app.service.StakeholderNotificationHandler;
 import app.model.Ingredient;
-import app.notification.NotificationService;
+import app.service.NotificationService;
 import app.repository.IngredientRepository;
 import app.service.ExpiryAlertService;
 import app.service.InventoryManager;
@@ -31,15 +28,8 @@ class ExpiryAlertServiceResilienceTest {
             throw new RuntimeException("Simulated provider outage");
         });
 
-        AlertHandler expiryCheck = new ExpiryCheckHandler(3);
-        AlertHandler chefNotify = new ChefNotificationHandler(notificationService);
-        expiryCheck.setNext(chefNotify);
-
-        ExpiryAlertService service = new ExpiryAlertService(
-                manager,
-                expiryCheck,
-                new AlertEventBus()
-        );
+        StakeholderNotificationHandler stakeholder = new StakeholderNotificationHandler(notificationService);
+        ExpiryAlertService service = new ExpiryAlertService(manager, stakeholder);
 
         List<ExpiryAlertContext> contexts = service.evaluateAndNotify("tenant-resilience");
 

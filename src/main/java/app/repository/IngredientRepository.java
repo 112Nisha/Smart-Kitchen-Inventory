@@ -6,10 +6,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class IngredientRepository {
     private final Map<String, Map<String, Ingredient>> byTenant = new ConcurrentHashMap<>();
+
+    // Exposed so the scheduled expiry-alert runner can enumerate which tenants
+    // to evaluate on each tick. Defensive copy prevents callers from mutating
+    // the repository's internal keyset.
+    public Set<String> findAllTenantIds() {
+        return Set.copyOf(byTenant.keySet());
+    }
 
     public Ingredient save(Ingredient ingredient) {
         Ingredient copy = ingredient.copy();
