@@ -50,6 +50,11 @@ public class SqliteIngredientRepository extends IngredientRepository {
             ORDER BY name COLLATE NOCASE, expiry_date
             """;
 
+    private static final String DELETE_BY_ID_SQL = """
+            DELETE FROM inventory_ingredients
+            WHERE tenant_id = ? AND id = ?
+            """;
+
     public SqliteIngredientRepository() {
         DatabaseInitializer.initialize();
     }
@@ -119,6 +124,20 @@ public class SqliteIngredientRepository extends IngredientRepository {
         }
 
         return ingredients;
+    }
+
+    @Override
+    public boolean deleteById(String tenantId, String ingredientId) {
+        try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
+             PreparedStatement stmt = conn.prepareStatement(DELETE_BY_ID_SQL)) {
+
+            enableForeignKeys(conn);
+            stmt.setString(1, tenantId);
+            stmt.setString(2, ingredientId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to delete ingredient", e);
+        }
     }
 
     private Ingredient mapRow(ResultSet rs) throws SQLException {

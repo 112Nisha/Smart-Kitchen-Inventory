@@ -36,6 +36,7 @@ class DashboardLoadPerformanceTest {
 
     @Test
     void dashboardLoadStaysUnderTwoSecondsWithCachedIngredientData() throws Exception {
+        InventoryManager.resetInstanceForTests();
         String tenant = "tenant-dashboard-performance";
         DelayedIngredientRepository repository = new DelayedIngredientRepository(Duration.ofMillis(1400));
         InventoryManager manager = InventoryManager.getInstance(repository, 3);
