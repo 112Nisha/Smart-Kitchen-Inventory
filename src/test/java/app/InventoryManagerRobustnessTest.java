@@ -30,6 +30,23 @@ class InventoryManagerRobustnessTest {
     }
 
     @Test
+    void useIngredientRejectsQuantityGreaterThanAvailable() {
+        InventoryManager.resetInstanceForTests();
+        IngredientRepository repository = new IngredientRepository();
+        InventoryManager manager = InventoryManager.getInstance(repository, 3);
+
+        Ingredient ingredient = new Ingredient("tenant-robust", "Tomato", 5, "kg", LocalDate.now().plusDays(2), 1);
+        manager.addIngredient(ingredient);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> manager.useIngredient("tenant-robust", ingredient.getId(), 5.01));
+        assertEquals("Used quantity cannot exceed available inventory", ex.getMessage());
+
+        Ingredient persisted = manager.findById("tenant-robust", ingredient.getId()).orElseThrow();
+        assertEquals(5.0, persisted.getQuantity(), 1e-9);
+    }
+
+    @Test
     void listIngredientsReturnsImmutableSnapshot() {
         InventoryManager.resetInstanceForTests();
         IngredientRepository repository = new IngredientRepository();
