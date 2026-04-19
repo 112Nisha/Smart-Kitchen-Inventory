@@ -83,12 +83,6 @@ Benchmark formulas for report:
 - `db_read_reduction_percent = ((miss_reads_per_request - hit_reads_per_request) / miss_reads_per_request) * 100`
 
 
-
-
-
-
-
-
 # Cache and Performance Test Summary
 
 ## 1. InventoryManagerCachingTest
@@ -112,7 +106,12 @@ Example assertions checked:
 - after update → repository called again  
 - tenant isolation → counts remain separate
 
----
+### Execution report (2026-04-19)
+
+- Result: `PASS` (`Tests run: 6, Failures: 0, Errors: 0, Skipped: 0`)
+- Command used: `mvn -Dtest=InventoryManagerCachingTest test`
+- Evidence file: `target/surefire-reports/app.InventoryManagerCachingTest.txt`
+
 
 ## 2. InventoryManagerCachePerformanceTest
 
@@ -139,6 +138,16 @@ Latency improvement: 97.6%
 Repository read reduction: 100.0%
 ```
 
+### Execution report (2026-04-19)
+
+- Result: `PASS` (`Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`)
+- Command used: `mvn -Dtest=InventoryManagerCachePerformanceTest test`
+- Captured metrics:
+  - Cache miss: mean=`4.532 ms`, median=`4.474 ms`, p95=`4.793 ms`, reads/request=`1.000`
+  - Cache hit: mean=`0.019 ms`, median=`0.019 ms`, p95=`0.026 ms`, reads/request=`0.000`
+  - Latency improvement: `99.59%`
+  - Repository read reduction: `100.00%`
+- Evidence file: `target/surefire-reports/app.InventoryManagerCachePerformanceTest.txt`
 
 ## 3.  DashboardLoadPerformanceTest
 
@@ -166,6 +175,14 @@ Typical assertions checked:
 - forwarded path = `/WEB-INF/views/dashboard.jsp`  
 - `ingredientCount = 600`  
 - `notificationCount = 300`
+
+### Execution report (2026-04-19)
+
+- Result: `PASS` (`Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`)
+- Command used: `mvn -Dtest=DashboardLoadPerformanceTest test`
+- Confirmed checks:
+  - Dashboard request remained under `2s` with warmed cache.
+- Evidence file: `target/surefire-reports/app.DashboardLoadPerformanceTest.txt`
 
 Current unit tests validate:
 - State transitions
