@@ -1,6 +1,7 @@
 package app.service;
 
 import app.model.Ingredient;
+import app.model.IngredientEvent;
 import app.repository.IngredientRepository;
 
 import java.math.BigDecimal;
@@ -13,7 +14,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
 public final class InventoryManager {
@@ -31,7 +31,7 @@ public final class InventoryManager {
     // state map doesn't grow forever. CopyOnWriteArrayList keeps add/fire
     // lock-free under concurrent read/write, which is fine given listeners
     // register once at startup.
-    private final List<Consumer<String>> ingredientRemovedListeners = new CopyOnWriteArrayList<>();
+    private final List<IngredientEventListener> eventListeners = new CopyOnWriteArrayList<>();
 
     private InventoryManager(IngredientRepository ingredientRepository, IntSupplier nearExpiryDays) {
         this.ingredientRepository = ingredientRepository;
@@ -124,12 +124,9 @@ public final class InventoryManager {
             item.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
             ingredientRepository.save(item);
             invalidateTenantCache(tenantId);
-            // Fix 8: consume-to-zero removes the item from the alertable pool.
-            // Notify listeners so they can drop per-ingredient state (e.g. the
-            // expiry tracker's last-seen-lifecycle entry). Partial uses don't
-            // fire — the item is still alertable until quantity hits zero.
+            fireEvent(new IngredientEvent.Used(item, usedQuantity));
             if (updated == 0.0) {
-                fireIngredientRemoved(ingredientId);
+                fireEvent(new IngredientEvent.ConsumedToZero(item));
             }
         });
         return existing;
@@ -145,10 +142,7 @@ public final class InventoryManager {
             item.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
             ingredientRepository.save(item);
             invalidateTenantCache(tenantId);
-            // Fix 8: discarded items are no longer alertable. Fire the event so
-            // the expiry tracker forgets them immediately rather than carrying
-            // stale lifecycle state until the next sweep.
-            fireIngredientRemoved(ingredientId);
+            fireEvent(new IngredientEvent.Discarded(item));
         });
         return existing;
     }
@@ -160,19 +154,16 @@ public final class InventoryManager {
      * subsystems that use this (expiry tracker) share the lifecycle of the
      * manager itself.
      */
-    public void addIngredientRemovedListener(Consumer<String> listener) {
-        ingredientRemovedListeners.add(Objects.requireNonNull(listener, "listener is required"));
+    public void addListener(IngredientEventListener listener) {
+        eventListeners.add(Objects.requireNonNull(listener, "listener is required"));
     }
 
-    private void fireIngredientRemoved(String ingredientId) {
-        // Fire-and-continue: one broken listener must not stop the others from
-        // running or bubble a random exception out of a routine mutation.
-        // We swallow and log to stderr in the same spirit as the scheduler.
-        for (Consumer<String> listener : ingredientRemovedListeners) {
+    private void fireEvent(IngredientEvent event) {
+        for (IngredientEventListener listener : eventListeners) {
             try {
-                listener.accept(ingredientId);
+                listener.onEvent(event);
             } catch (RuntimeException ex) {
-                System.err.println("[InventoryManager] removal listener failed: " + ex.getMessage());
+                System.err.println("[InventoryManager] event listener failed: " + ex.getMessage());
             }
         }
     }

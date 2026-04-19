@@ -93,14 +93,10 @@ public class NotificationsServlet extends BaseServlet {
             // first, so "Discard immediately" rows surface above near-expiry).
             // Anything else (FRESH after a threshold tightening, consumed to
             // zero) is no longer actionable and is hidden.
-            long sortKey;
-            if (lifecycle == IngredientLifecycle.DISCARDED) {
-                sortKey = Long.MAX_VALUE;
-            } else if (lifecycle == IngredientLifecycle.EXPIRED || lifecycle == IngredientLifecycle.NEAR_EXPIRY) {
-                sortKey = ChronoUnit.DAYS.between(today, ingredient.getExpiryDate());
-            } else {
+            if (lifecycle != IngredientLifecycle.EXPIRED && lifecycle != IngredientLifecycle.NEAR_EXPIRY) {
                 continue;
             }
+            long sortKey = ChronoUnit.DAYS.between(today, ingredient.getExpiryDate());
             ranked.add(new RankedNotification(m, lifecycle, sortKey));
         }
         ranked.sort(Comparator.comparingLong(RankedNotification::sortKey));
