@@ -1,20 +1,8 @@
 package app.web;
 
-import app.model.ExpiryAlertContext;
-import app.service.ExpiryAlertScheduler;
-import app.service.IngredientStateTracker;
-import app.service.StakeholderNotificationHandler;
-import app.model.*;
-import app.repository.InMemoryNotificationStore;
-import app.repository.NotificationStore;
-import app.repository.SqliteNotificationStore;
-import app.service.DashboardNotificationStrategy;
-import app.service.NotificationService;
-import app.service.NotificationStrategy;
-import app.repository.*;
-import app.service.*;
-import app.state.*;
-import app.web.*;
+import app.model.Ingredient;
+import app.model.IngredientLifecycle;
+import app.model.NotificationMessage;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -33,7 +21,10 @@ public class DashboardServlet extends BaseServlet {
                         resp.sendRedirect(req.getContextPath() + "/auth?error=Please log in first.");
                         return;
                 }
-                List<Ingredient> ingredients = services().inventoryManager().listIngredients(tenantId);
+                List<Ingredient> ingredients = services().inventoryManager().listIngredients(tenantId).stream()
+                                .filter(ingredient -> !ingredient.isDiscarded())
+                                .filter(ingredient -> ingredient.getQuantity() > 1e-9)
+                                .toList();
                 List<Ingredient> shoppingList = services().shoppingListService().generateShoppingList(tenantId);
                 List<NotificationMessage> notifications = services().notificationStore().all().stream()
                                 .filter(item -> item.getTenantId().equals(tenantId))

@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -60,6 +61,26 @@ class IngredientSqliteRepositoryIntegrationTest {
                 ));
 
         assertTrue(ex.getMessage().contains("Failed to save ingredient"));
+    }
+
+    @Test
+    void deleteByIdRemovesIngredientAcrossRepositoryInstances() {
+        String tenant = "it-tenant-" + UUID.randomUUID();
+        createRestaurant(tenant);
+
+        try {
+            SqliteIngredientRepository firstRepository = new SqliteIngredientRepository();
+            Ingredient saved = firstRepository.save(
+                    new Ingredient(tenant, "Yogurt", 2.0, "kg", LocalDate.now().plusDays(3), 0.5)
+            );
+
+            assertTrue(firstRepository.deleteById(tenant, saved.getId()));
+
+            SqliteIngredientRepository secondRepository = new SqliteIngredientRepository();
+            assertFalse(secondRepository.findById(tenant, saved.getId()).isPresent());
+        } finally {
+            cleanupTenant(tenant);
+        }
     }
 
     private void createRestaurant(String tenant) {
