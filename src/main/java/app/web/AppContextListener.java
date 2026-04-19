@@ -5,6 +5,10 @@ import app.service.StakeholderNotificationHandler;
 import app.config.AlertConfigService;
 import app.model.Ingredient;
 import app.service.DashboardNotificationStrategy;
+import app.service.EmailNotificationStrategy;
+import app.service.LowStockAlertService;
+import app.service.RoleNotificationListener;
+import app.service.TrackerCleanupListener;
 import app.repository.NotificationStore;
 import app.service.NotificationService;
 import app.repository.SqliteNotificationStore;
@@ -57,13 +61,16 @@ public class AppContextListener implements ServletContextListener {
         NotificationStore notificationStore = new SqliteNotificationStore();
         NotificationService notificationService = new NotificationService(3);
         notificationService.registerStrategy(new DashboardNotificationStrategy(notificationStore));
+        notificationService.registerStrategy(new EmailNotificationStrategy("localhost", 25, "noreply@kitchen.local"));
 
         StakeholderNotificationHandler stakeholderNotify = new StakeholderNotificationHandler(notificationService);
 
         ExpiryAlertService expiryAlertService = new ExpiryAlertService(inventoryManager, stakeholderNotify);
         expiryAlertService.attachLifecycleListeners();
+        inventoryManager.addListener(new RoleNotificationListener(notificationService));
+
         ShoppingListService shoppingListService = new ShoppingListService(inventoryManager);
-        DishRecommendationService recommendationService = new DishRecommendationService(inventoryManager, new DishRepository());
+        DishRecommendationService recommendationService = new DishRecommendationService(inventoryManager, new DishRepository(), notificationService);
         WasteImpactService wasteImpactService = new WasteImpactService();
         NavigationAssistantService navigationAssistantService = new NavigationAssistantService();
 
@@ -81,13 +88,10 @@ public class AppContextListener implements ServletContextListener {
         ServletContext context = sce.getServletContext();
         context.setAttribute(APP_SERVICES_KEY, appServices);
 
-        // FR4: automated monitoring on a configurable schedule. Interval is
-        // read from the system property `expiry.alert.interval.seconds` so
-        // operators can tune cadence without a rebuild; default is 60s.
-        // The same scheduler runs a daily retention prune against the durable
-        // store — notifications older than the retention window are discarded
-        // so the table doesn't grow unbounded.
-        long intervalSeconds = readIntervalSecondsFromProperty(60L);
+        // Sweep runs once per day — expiry thresholds are day-level so more
+        // frequent checks add no value. Override via system property
+        // `expiry.alert.interval.seconds` for testing without waiting 24h.
+        long intervalSeconds = readIntervalSecondsFromProperty(86400L);
         expiryAlertScheduler = new ExpiryAlertScheduler(
                 expiryAlertService,
                 intervalSeconds,
@@ -95,6 +99,8 @@ public class AppContextListener implements ServletContextListener {
                 TimeUnit.SECONDS,
                 notificationStore,
                 (java.util.function.IntSupplier) () -> alertConfigService.get().retentionDays());
+        LowStockAlertService lowStockAlertService = new LowStockAlertService(inventoryManager, notificationService);
+        expiryAlertScheduler.setLowStockAlertService(lowStockAlertService);
         expiryAlertScheduler.start();
     }
 

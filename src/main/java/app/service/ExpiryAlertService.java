@@ -32,7 +32,7 @@ public class ExpiryAlertService {
     // (e.g. scheduler tests can build it against a null manager).
     public void attachLifecycleListeners() {
         if (inventoryManager != null) {
-            inventoryManager.addIngredientRemovedListener(stateTracker::forget);
+            inventoryManager.addListener(new TrackerCleanupListener(stateTracker));
         }
     }
 

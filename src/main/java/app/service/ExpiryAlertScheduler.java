@@ -25,6 +25,7 @@ import java.util.function.IntSupplier;
  */
 public class ExpiryAlertScheduler {
     private final ExpiryAlertService alertService;
+    private LowStockAlertService lowStockAlertService;
     // How often to sweep, in whatever time unit was supplied. Stored as raw
     // long + TimeUnit so tests can use milliseconds while production uses
     // seconds — no unit conversion happens until scheduleAtFixedRate is called.
@@ -158,16 +159,22 @@ public class ExpiryAlertScheduler {
         }
     }
 
+    public void setLowStockAlertService(LowStockAlertService lowStockAlertService) {
+        this.lowStockAlertService = lowStockAlertService;
+    }
+
     private void runOnce() {
-        // Swallow any exception here — a throw from a scheduled task cancels
-        // ALL future executions of that task, which would silently disable
-        // monitoring. We'd rather log-and-continue than silently die.
         try {
             alertService.evaluateAllTenants();
         } catch (RuntimeException ex) {
-            // No SLF4J in this project; stderr is the honest thing to do.
-            // A production system would route this to a proper logger.
-            System.err.println("[ExpiryAlertScheduler] sweep failed: " + ex.getMessage());
+            System.err.println("[ExpiryAlertScheduler] expiry sweep failed: " + ex.getMessage());
+        }
+        if (lowStockAlertService != null) {
+            try {
+                lowStockAlertService.evaluateAllTenants();
+            } catch (RuntimeException ex) {
+                System.err.println("[ExpiryAlertScheduler] low-stock sweep failed: " + ex.getMessage());
+            }
         }
         pruneIfNewDay();
     }

@@ -10,8 +10,6 @@ import app.model.NotificationMessage;
  * notifications per item.
  */
 public class StakeholderNotificationHandler {
-    public static final String ROLE = "STAKEHOLDER";
-
     private final NotificationService notificationService;
 
     public StakeholderNotificationHandler(NotificationService notificationService) {
@@ -22,17 +20,24 @@ public class StakeholderNotificationHandler {
         long days = context.getDaysUntilExpiry();
         boolean expired = days <= 0;
         String name = context.getIngredient().getName();
-        String subject = expired ? "Ingredient expired: " + name : "Ingredient nearing expiry: " + name;
-        String body = expired ? "Discard immediately." : "Use within " + days + " day(s).";
 
-        NotificationMessage message = new NotificationMessage(
+        String chefSubject = expired ? "Ingredient expired: " + name : "Ingredient nearing expiry: " + name;
+        String chefBody = expired ? "Discard immediately." : "Use within " + days + " day(s).";
+
+        String managerSubject = expired ? "Stock alert — expired: " + name : "Stock advisory: " + name + " expiring soon";
+        String managerBody = expired ? name + " has expired — check waste report." : name + " expires in " + days + " day(s).";
+
+        send(context, "CHEF", chefSubject, chefBody);
+        send(context, "MANAGER", managerSubject, managerBody);
+        context.addEvent("StakeholderNotificationHandler: chef and manager notified");
+    }
+
+    private void send(ExpiryAlertContext context, String role, String subject, String body) {
+        notificationService.sendWithRetry(new NotificationMessage(
                 context.getIngredient().getTenantId(),
                 context.getIngredient().getId(),
-                ROLE,
+                role,
                 subject,
-                body
-        );
-        notificationService.sendWithRetry(message);
-        context.addEvent("StakeholderNotificationHandler: stakeholder notified");
+                body));
     }
 }

@@ -26,11 +26,17 @@ public class DishRecommendationService {
 
         private final InventoryManager inventoryManager;
         private final DishRepository dishRepository;
+        private final NotificationService notificationService;
 
-        /* returns a list of recommended dishes based on available ingredients */
         public DishRecommendationService(InventoryManager inventoryManager, DishRepository dishRepository) {
+                this(inventoryManager, dishRepository, null);
+        }
+
+        public DishRecommendationService(InventoryManager inventoryManager, DishRepository dishRepository,
+                                         NotificationService notificationService) {
                 this.inventoryManager = inventoryManager;
                 this.dishRepository = dishRepository;
+                this.notificationService = notificationService;
         }
 
         public List<DishRecipe> suggestDishes(String tenantId) {
@@ -343,13 +349,31 @@ public class DishRecommendationService {
                         }
                 }
 
-                return new CookDishResult(
+                CookDishResult result = new CookDishResult(
                                 dish.getName(),
                                 totalUsedWeightKg,
                                 nearExpiryUsedKg,
                                 nearExpiryUsedLiters,
                                 Map.copyOf(usedByUnit),
                                 List.copyOf(rescuedNearExpiryIngredients));
+
+                fireDishNotification(tenantId, dish.getName(),
+                        "Dish cooked: " + dish.getName(),
+                        dish.getName() + " was logged as cooked.");
+                return result;
+        }
+
+        private void fireDishNotification(String tenantId, String dishName, String subject, String body) {
+                if (notificationService == null) return;
+                for (String role : new String[]{"CHEF", "MANAGER"}) {
+                        try {
+                                notificationService.sendWithRetry(new app.model.NotificationMessage(
+                                        tenantId, dishName, role, subject, body));
+                        } catch (RuntimeException ex) {
+                                System.err.println("[DishRecommendationService] notification failed for "
+                                        + role + ": " + ex.getMessage());
+                        }
+                }
         }
 
         private boolean isWeightUnit(String unit) {
@@ -384,6 +408,8 @@ public class DishRecommendationService {
         public void updateRecipe(String tenantId, DishRecipe recipe) {
                 Long restaurantId = getRestaurantIdFromTenant(tenantId);
                 dishRepository.update(recipe, restaurantId);
+                fireDishNotification(tenantId, recipe.getName(), "Dish updated: " + recipe.getName(),
+                        "The recipe for " + recipe.getName() + " has been updated.");
         }
 
         public void deleteRecipe(String tenantId, Long recipeId) {
