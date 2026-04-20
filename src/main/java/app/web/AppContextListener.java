@@ -65,7 +65,15 @@ public class AppContextListener implements ServletContextListener {
         NotificationStore notificationStore = new SqliteNotificationStore();
         NotificationService notificationService = new NotificationService(3);
         notificationService.registerStrategy(new DashboardNotificationStrategy(notificationStore));
-        notificationService.registerStrategy(new EmailNotificationStrategy("localhost", 25, new UserRepository()));
+        String gmailFrom = System.getenv("GMAIL_FROM");
+        String gmailAppPassword = System.getenv("GMAIL_APP_PASSWORD");
+        if (gmailFrom != null && !gmailFrom.isBlank()
+                && gmailAppPassword != null && !gmailAppPassword.isBlank()) {
+            notificationService.registerStrategy(
+                    new EmailNotificationStrategy(gmailFrom, gmailAppPassword, new UserRepository()));
+        } else {
+            System.err.println("[AppContextListener] GMAIL_FROM or GMAIL_APP_PASSWORD not set — email notifications disabled");
+        }
 
         StakeholderNotificationHandler stakeholderNotify = new StakeholderNotificationHandler(notificationService);
 
@@ -117,6 +125,15 @@ public class AppContextListener implements ServletContextListener {
                 (java.util.function.IntSupplier) () -> alertConfigService.get().retentionDays());
         expiryAlertScheduler.setLowStockAlertService(lowStockAlertService);
         expiryAlertScheduler.start();
+
+        // Run an immediate sweep so dashboard notifications are populated at
+        // boot without waiting for the first 24h scheduler tick.
+        try {
+            expiryAlertService.evaluateAllTenants();
+            lowStockAlertService.evaluateAllTenants();
+        } catch (RuntimeException ex) {
+            System.err.println("[AppContextListener] startup sweep failed: " + ex.getMessage());
+        }
     }
 
     @Override
