@@ -1,17 +1,12 @@
 package app.service;
 
 import app.model.Ingredient;
+import app.model.IngredientEvent;
 import app.model.NotificationMessage;
 
-import java.util.HashMap;
-import java.util.Map;
-
-public class LowStockAlertService {
+public class LowStockAlertService implements IngredientEventListener {
     private final InventoryManager inventoryManager;
     private final NotificationService notificationService;
-    // Tracks which ingredients already have a low-stock notification fired today
-    // to avoid re-firing on every sweep until quantity rises above threshold.
-    private final Map<String, Double> lastAlertedQuantity = new HashMap<>();
 
     public LowStockAlertService(InventoryManager inventoryManager, NotificationService notificationService) {
         this.inventoryManager = inventoryManager;
@@ -29,42 +24,62 @@ public class LowStockAlertService {
         }
     }
 
+    @Override
+    public void onEvent(IngredientEvent event) {
+        // Re-evaluate the ingredient immediately when it is used or updated so
+        // low-stock notifications fire without waiting for the next daily sweep.
+        Ingredient ingredient = null;
+        if (event instanceof IngredientEvent.Used e) {
+            ingredient = e.ingredient();
+        } else if (event instanceof IngredientEvent.Updated e) {
+            ingredient = e.ingredient();
+        }
+        if (ingredient != null) {
+            checkAndNotify(ingredient);
+        }
+    }
+
     private void evaluateAndNotify(String tenantId) {
         for (Ingredient ingredient : inventoryManager.listIngredients(tenantId)) {
-            if (ingredient.isDiscarded()) continue;
-            double qty = ingredient.getQuantity();
-            double threshold = ingredient.getLowStockThreshold();
-            if (threshold <= 0) continue;
+            checkAndNotify(ingredient);
+        }
+    }
 
-            boolean isLow = qty <= threshold;
-            Double prev = lastAlertedQuantity.get(ingredient.getId());
-
-            // Fire when crossing into low-stock. Re-fire if quantity dropped further.
-            if (isLow && (prev == null || qty < prev)) {
-                lastAlertedQuantity.put(ingredient.getId(), qty);
-                dispatch(ingredient);
-            } else if (!isLow) {
-                lastAlertedQuantity.remove(ingredient.getId());
-            }
+    private void checkAndNotify(Ingredient ingredient) {
+        if (ingredient.isDiscarded()) return;
+        double qty = ingredient.getQuantity();
+        double threshold = ingredient.getLowStockThreshold();
+        if (threshold <= 0) return;
+        if (qty <= threshold) {
+            dispatch(ingredient);
         }
     }
 
     private void dispatch(Ingredient ingredient) {
-        String subject = "Low stock: " + ingredient.getName();
-        String body = String.format("Only %.2f %s remaining (threshold: %.2f).",
-                ingredient.getQuantity(), ingredient.getUnit(), ingredient.getLowStockThreshold());
-        NotificationMessage message = new NotificationMessage(
-                ingredient.getTenantId(),
-                ingredient.getId(),
-                "STAKEHOLDER",
-                subject,
-                body
-        );
+        String name = ingredient.getName();
+        String unit = ingredient.getUnit();
+        double qty = ingredient.getQuantity();
+        double threshold = ingredient.getLowStockThreshold();
+
+        send(ingredient, "CHEF",
+                "Low stock: " + name,
+                String.format("Only %.2f %s remaining — reorder soon (threshold: %.2f).", qty, unit, threshold));
+        send(ingredient, "MANAGER",
+                "Stock advisory: " + name + " running low",
+                String.format("%.2f %s remaining, below threshold of %.2f. Consider restocking.", qty, unit, threshold));
+    }
+
+    private void send(Ingredient ingredient, String role, String subject, String body) {
         try {
-            notificationService.sendWithRetry(message);
+            notificationService.sendWithRetry(new NotificationMessage(
+                    ingredient.getTenantId(),
+                    ingredient.getId(),
+                    role,
+                    subject,
+                    body));
         } catch (RuntimeException ex) {
             System.err.println("[LowStockAlertService] dispatch failed for "
-                    + ingredient.getName() + ": " + ex.getMessage());
+                    + role + "/" + ingredient.getName() + ": " + ex.getMessage());
         }
     }
 }

@@ -8,7 +8,7 @@ import app.service.DashboardNotificationStrategy;
 import app.service.EmailNotificationStrategy;
 import app.service.LowStockAlertService;
 import app.service.RoleNotificationListener;
-import app.service.TrackerCleanupListener;
+import app.service.StaleNotificationPruner;
 import app.repository.NotificationStore;
 import app.service.NotificationService;
 import app.repository.SqliteNotificationStore;
@@ -70,6 +70,7 @@ public class AppContextListener implements ServletContextListener {
         ExpiryAlertService expiryAlertService = new ExpiryAlertService(inventoryManager, stakeholderNotify);
         expiryAlertService.attachLifecycleListeners();
         inventoryManager.addListener(new RoleNotificationListener(notificationService));
+        inventoryManager.addListener(new StaleNotificationPruner(notificationStore));
 
         // Create shopping list service with repository
         ShoppingListRepository shoppingListRepository = new SqliteShoppingListRepository();
@@ -82,6 +83,9 @@ public class AppContextListener implements ServletContextListener {
         WasteImpactService wasteImpactService = new WasteImpactService();
         NavigationAssistantService navigationAssistantService = new NavigationAssistantService();
 
+        LowStockAlertService lowStockAlertService = new LowStockAlertService(inventoryManager, notificationService);
+        inventoryManager.addListener(lowStockAlertService);
+
         AppServices appServices = new AppServices(
                 inventoryManager,
                 expiryAlertService,
@@ -90,7 +94,8 @@ public class AppContextListener implements ServletContextListener {
                 wasteImpactService,
                 navigationAssistantService,
                 notificationStore,
-                alertConfigService
+                alertConfigService,
+                lowStockAlertService
         );
 
         ServletContext context = sce.getServletContext();
@@ -107,7 +112,6 @@ public class AppContextListener implements ServletContextListener {
                 TimeUnit.SECONDS,
                 notificationStore,
                 (java.util.function.IntSupplier) () -> alertConfigService.get().retentionDays());
-        LowStockAlertService lowStockAlertService = new LowStockAlertService(inventoryManager, notificationService);
         expiryAlertScheduler.setLowStockAlertService(lowStockAlertService);
         expiryAlertScheduler.start();
     }

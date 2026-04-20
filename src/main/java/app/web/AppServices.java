@@ -27,6 +27,7 @@ public record AppServices(
         WasteImpactService wasteImpactService,
         NavigationAssistantService navigationAssistantService,
         NotificationStore notificationStore,
-        AlertConfigService alertConfigService
+        AlertConfigService alertConfigService,
+        LowStockAlertService lowStockAlertService
 ) {
 }

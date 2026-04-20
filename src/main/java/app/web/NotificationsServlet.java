@@ -77,9 +77,19 @@ public class NotificationsServlet extends BaseServlet {
                 .listIngredientsIncludingDiscarded(tenantId).stream()
                 .collect(Collectors.toMap(Ingredient::getId, Function.identity(), (a, b) -> a));
 
+        String recipientRole = isChef(req) ? "CHEF" : "MANAGER";
+
         LocalDate today = LocalDate.now();
         List<RankedNotification> ranked = new ArrayList<>();
         for (NotificationMessage m : services().notificationStore().allForTenant(tenantId)) {
+            if (!recipientRole.equalsIgnoreCase(m.getRecipientRole())) continue;
+            // Dish notifications have no ingredient row — render them as-is.
+            boolean isDish = m.getIngredientId() != null && m.getIngredientId().startsWith("dish:");
+            if (isDish) {
+                ranked.add(new RankedNotification(m, IngredientLifecycle.FRESH, Long.MAX_VALUE));
+                continue;
+            }
+
             Ingredient ingredient = ingredientsById.get(m.getIngredientId());
             if (ingredient == null) {
                 // Orphan log row (ingredient deleted entirely) — drop it; nothing
@@ -88,12 +98,8 @@ public class NotificationsServlet extends BaseServlet {
             }
             IngredientLifecycle lifecycle = ingredient.getLifecycle();
 
-            // Discarded → bottom, regardless of when it expired. Expired and
-            // near-expiry are sorted by absolute days-until-expiry (negative
-            // first, so "Discard immediately" rows surface above near-expiry).
-            // Anything else (FRESH after a threshold tightening, consumed to
-            // zero) is no longer actionable and is hidden.
-            if (lifecycle != IngredientLifecycle.EXPIRED && lifecycle != IngredientLifecycle.NEAR_EXPIRY) {
+            // Discarded items are no longer actionable — hide them.
+            if (lifecycle == IngredientLifecycle.DISCARDED) {
                 continue;
             }
             long sortKey = ChronoUnit.DAYS.between(today, ingredient.getExpiryDate());
@@ -146,6 +152,7 @@ public class NotificationsServlet extends BaseServlet {
             // durable, the sweep will retry on the next tick.
             try {
                 services().expiryAlertService().evaluateAllTenants();
+                services().lowStockAlertService().evaluateAllTenants();
             } catch (RuntimeException ex) {
                 System.err.println("[NotificationsServlet] post-save sweep failed: " + ex.getMessage());
             }

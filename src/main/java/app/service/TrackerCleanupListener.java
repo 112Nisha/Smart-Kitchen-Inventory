@@ -15,7 +15,8 @@ public class TrackerCleanupListener implements IngredientEventListener {
             stateTracker.forget(e.ingredient().getId());
         } else if (event instanceof IngredientEvent.ConsumedToZero e) {
             stateTracker.forget(e.ingredient().getId());
+        } else if (event instanceof IngredientEvent.Updated e) {
+            stateTracker.forget(e.ingredient().getId());
         }
-        // IngredientEvent.Used — partial use, tracker entry stays valid
     }
 }

@@ -30,20 +30,19 @@ public class IngredientStateTracker {
     // Public overload so callers (and tests) can pin a specific "today"
     // without a time-injection abstraction.
     public boolean recordAndCheckTransition(String ingredientId, IngredientLifecycle current, LocalDate today) {
-        Entry previous = lastSeenByIngredient.put(ingredientId, new Entry(current, today));
-
-        if (!isAlertable(current)) {
-            return false;
-        }
-        if (previous == null) {
-            return true;
-        }
-        if (!previous.day.equals(today)) {
-            // Day rolled over — re-nag the alertable state once for the new day.
-            return true;
-        }
-        // Same day: only a genuine lifecycle change fires again.
-        return previous.lifecycle != current;
+        // compute() is atomic on ConcurrentHashMap — the read of the previous
+        // value and the write of the new value happen in one operation, so a
+        // concurrent forget() can't race between the put and the check.
+        boolean[] shouldFire = {false};
+        lastSeenByIngredient.compute(ingredientId, (id, previous) -> {
+            if (isAlertable(current)) {
+                if (previous == null || !previous.day.equals(today) || previous.lifecycle != current) {
+                    shouldFire[0] = true;
+                }
+            }
+            return new Entry(current, today);
+        });
+        return shouldFire[0];
     }
 
     public void forget(String ingredientId) {

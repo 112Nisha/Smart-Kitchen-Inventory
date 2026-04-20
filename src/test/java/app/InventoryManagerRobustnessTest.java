@@ -74,7 +74,9 @@ class InventoryManagerRobustnessTest {
 
         manager.discardIngredient("tenant-robust", ingredient.getId());
 
-        assertTrue(manager.findById("tenant-robust", ingredient.getId()).isEmpty());
+        // Discarded items are kept in the repository for audit but excluded from
+        // listIngredients (active inventory view). findById still returns the row.
+        assertTrue(manager.findById("tenant-robust", ingredient.getId()).isPresent());
         assertTrue(manager.listIngredients("tenant-robust").isEmpty());
     }
 

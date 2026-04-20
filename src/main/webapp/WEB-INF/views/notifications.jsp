@@ -5,32 +5,32 @@
     <details class="alert-settings-details">
         <summary class="alert-settings-summary">Alert Settings</summary>
 
-        <c:if test="${not empty successMessage}">
-            <p class="success-message"><c:out value="${successMessage}"/></p>
-        </c:if>
-        <c:if test="${not empty errorMessage}">
-            <p class="error-message"><c:out value="${errorMessage}"/></p>
-        </c:if>
+        <div class="alert-settings-panel">
+            <c:if test="${not empty successMessage}">
+                <p class="success-message"><c:out value="${successMessage}"/></p>
+            </c:if>
+            <c:if test="${not empty errorMessage}">
+                <p class="error-message"><c:out value="${errorMessage}"/></p>
+            </c:if>
 
-        <form method="post" action="${pageContext.request.contextPath}/notifications" class="config-form">
-            <div class="form-row">
-                <label for="nearExpiryDays">Near-expiry window (days)</label>
-                <input type="number" id="nearExpiryDays" name="nearExpiryDays"
-                       value="${nearExpiryDays}" min="0" max="${maxDays}" required>
-            </div>
-
-            <div class="form-row">
-                <label for="retentionDays">Notification retention (days)</label>
-                <input type="number" id="retentionDays" name="retentionDays"
-                       value="${retentionDays}" min="1" max="${maxDays}" required>
-            </div>
-
-            <button type="submit">Save</button>
-        </form>
+            <form method="post" action="${pageContext.request.contextPath}/notifications" class="alert-settings-form">
+                <div class="alert-settings-field">
+                    <label for="nearExpiryDays">Near-expiry window</label>
+                    <input type="number" id="nearExpiryDays" name="nearExpiryDays"
+                           value="${nearExpiryDays}" min="0" max="${maxDays}" required>
+                    <span class="alert-settings-unit">days</span>
+                </div>
+                <div class="alert-settings-field">
+                    <label for="retentionDays">Retention</label>
+                    <input type="number" id="retentionDays" name="retentionDays"
+                           value="${retentionDays}" min="1" max="${maxDays}" required>
+                    <span class="alert-settings-unit">days</span>
+                </div>
+                <button type="submit" class="alert-settings-save">Save</button>
+            </form>
+        </div>
     </details>
-</section>
 
-<section class="card">
     <h2>Notifications</h2>
 
     <c:choose>

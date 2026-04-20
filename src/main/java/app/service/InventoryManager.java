@@ -37,6 +37,10 @@ public final class InventoryManager {
     // register once at startup.
     private final List<IngredientEventListener> eventListeners = new CopyOnWriteArrayList<>();
     private final List<InventoryChangeObserver> inventoryObservers = new ArrayList<>();
+    // When true on the current thread, Used events are suppressed. Set by
+    // callers (e.g. DishRecommendationService) that batch-consume ingredients
+    // and fire their own higher-level notification instead.
+    private final ThreadLocal<Boolean> suppressUsedEvents = ThreadLocal.withInitial(() -> false);
 
     private InventoryManager(IngredientRepository ingredientRepository, IntSupplier nearExpiryDays) {
         this.ingredientRepository = ingredientRepository;
@@ -130,6 +134,7 @@ public final class InventoryManager {
             ingredientRepository.save(item);
             invalidateTenantCache(tenantId);
             notifyInventoryObservers(tenantId);
+            fireEvent(new IngredientEvent.Updated(item));
         });
         return existing;
     }
@@ -198,7 +203,14 @@ public final class InventoryManager {
         eventListeners.add(Objects.requireNonNull(listener, "listener is required"));
     }
 
+    public void setSuppressUsedEvents(boolean suppress) {
+        suppressUsedEvents.set(suppress);
+    }
+
     private void fireEvent(IngredientEvent event) {
+        if (event instanceof IngredientEvent.Used && suppressUsedEvents.get()) {
+            return;
+        }
         for (IngredientEventListener listener : eventListeners) {
             try {
                 listener.onEvent(event);

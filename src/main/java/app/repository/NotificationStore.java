@@ -37,4 +37,6 @@ public interface NotificationStore {
      * @return number of rows actually removed (for logging / tests).
      */
     int pruneOlderThan(LocalDate cutoff);
+
+    int pruneByIngredient(String tenantId, String ingredientId);
 }

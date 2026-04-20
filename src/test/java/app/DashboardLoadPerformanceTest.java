@@ -81,6 +81,7 @@ class DashboardLoadPerformanceTest {
                         null,
                         null,
                         notificationStore,
+                        null,
                         null
                 ),
                 tenant

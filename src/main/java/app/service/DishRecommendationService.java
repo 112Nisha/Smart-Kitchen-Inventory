@@ -323,30 +323,35 @@ public class DishRecommendationService {
                         }
                 }
 
-                for (PlannedConsumption plannedConsumption : plannedConsumptions) {
-                        Optional<Ingredient> updated = inventoryManager.useIngredient(
-                                        tenantId,
-                                        plannedConsumption.ingredientId(),
-                                        plannedConsumption.quantity());
-                        if (updated.isEmpty()) {
-                                throw new IllegalStateException("Ingredient disappeared during cook log: "
-                                                + plannedConsumption.ingredientName());
-                        }
-
-                        usedByUnit.merge(plannedConsumption.unitLabel(), plannedConsumption.quantity(), Double::sum);
-
-                        if (plannedConsumption.weightUnit()) {
-                                totalUsedWeightKg += plannedConsumption.quantity();
-                        }
-
-                        if (plannedConsumption.nearExpiry()) {
-                                if (plannedConsumption.unitLabel().equals("kg")) {
-                                        nearExpiryUsedKg += plannedConsumption.quantity();
-                                } else if (plannedConsumption.unitLabel().equals("liters")) {
-                                        nearExpiryUsedLiters += plannedConsumption.quantity();
+                inventoryManager.setSuppressUsedEvents(true);
+                try {
+                        for (PlannedConsumption plannedConsumption : plannedConsumptions) {
+                                Optional<Ingredient> updated = inventoryManager.useIngredient(
+                                                tenantId,
+                                                plannedConsumption.ingredientId(),
+                                                plannedConsumption.quantity());
+                                if (updated.isEmpty()) {
+                                        throw new IllegalStateException("Ingredient disappeared during cook log: "
+                                                        + plannedConsumption.ingredientName());
                                 }
-                                rescuedNearExpiryIngredients.add(plannedConsumption.ingredientName());
+
+                                usedByUnit.merge(plannedConsumption.unitLabel(), plannedConsumption.quantity(), Double::sum);
+
+                                if (plannedConsumption.weightUnit()) {
+                                        totalUsedWeightKg += plannedConsumption.quantity();
+                                }
+
+                                if (plannedConsumption.nearExpiry()) {
+                                        if (plannedConsumption.unitLabel().equals("kg")) {
+                                                nearExpiryUsedKg += plannedConsumption.quantity();
+                                        } else if (plannedConsumption.unitLabel().equals("liters")) {
+                                                nearExpiryUsedLiters += plannedConsumption.quantity();
+                                        }
+                                        rescuedNearExpiryIngredients.add(plannedConsumption.ingredientName());
+                                }
                         }
+                } finally {
+                        inventoryManager.setSuppressUsedEvents(false);
                 }
 
                 CookDishResult result = new CookDishResult(
@@ -368,7 +373,7 @@ public class DishRecommendationService {
                 for (String role : new String[]{"CHEF", "MANAGER"}) {
                         try {
                                 notificationService.sendWithRetry(new app.model.NotificationMessage(
-                                        tenantId, dishName, role, subject, body));
+                                        tenantId, "dish:" + dishName, role, subject, body));
                         } catch (RuntimeException ex) {
                                 System.err.println("[DishRecommendationService] notification failed for "
                                         + role + ": " + ex.getMessage());

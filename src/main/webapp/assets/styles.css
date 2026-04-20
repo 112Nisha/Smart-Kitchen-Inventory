@@ -863,21 +863,22 @@ tbody tr:hover {
 
 /* ─── ALERT SETTINGS DROPDOWN ────────────────────────── */
 .alert-settings-details {
-    width: 100%;
+    display: inline-block;
+    margin-bottom: 0.6rem;
 }
 
 .alert-settings-summary {
-    font-family: "Cambria", "Times New Roman", serif;
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--ink);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--ink-3);
     cursor: pointer;
-    padding: 0.4rem 0;
     list-style: none;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.35rem;
     user-select: none;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .alert-settings-summary::-webkit-details-marker {
@@ -886,22 +887,66 @@ tbody tr:hover {
 
 .alert-settings-summary::before {
     content: "▶";
-    font-size: 0.7rem;
+    font-size: 0.55rem;
     color: var(--gold);
-    transition: transform 0.18s ease;
+    transition: transform 0.15s ease;
 }
 
 .alert-settings-details[open] .alert-settings-summary::before {
     transform: rotate(90deg);
 }
 
-.alert-settings-details .config-form {
-    margin-top: 1.1rem;
+.alert-settings-panel {
+    margin-top: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    display: inline-block;
 }
 
-.alert-settings-details .success-message,
-.alert-settings-details .error-message {
-    margin-top: 0.8rem;
+.alert-settings-form {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.alert-settings-field {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.alert-settings-field label {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--ink-2);
+    white-space: nowrap;
+}
+
+.alert-settings-field input {
+    width: 4rem;
+    padding: 0.3rem 0.45rem;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.alert-settings-unit {
+    font-size: 0.78rem;
+    color: var(--ink-3);
+}
+
+.alert-settings-save {
+    padding: 0.32rem 0.85rem;
+    font-size: 0.82rem;
+}
+
+.alert-settings-panel .success-message,
+.alert-settings-panel .error-message {
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
 }
 
 

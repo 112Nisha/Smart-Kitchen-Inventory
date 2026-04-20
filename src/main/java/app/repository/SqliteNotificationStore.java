@@ -118,6 +118,19 @@ public class SqliteNotificationStore implements NotificationStore {
     }
 
     @Override
+    public int pruneByIngredient(String tenantId, String ingredientId) {
+        String sql = "DELETE FROM notifications WHERE tenant_id = ? AND ingredient_id = ?";
+        try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, tenantId);
+            stmt.setString(2, ingredientId);
+            return stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to prune notifications for ingredient " + ingredientId, e);
+        }
+    }
+
+    @Override
     public int pruneOlderThan(LocalDate cutoff) {
         try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
              PreparedStatement stmt = conn.prepareStatement(DELETE_OLDER_THAN_SQL)) {

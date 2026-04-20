@@ -41,10 +41,10 @@ class StateTrackerCleanupTest {
     private List<String> captureRemovals() {
         List<String> removed = new ArrayList<>();
         manager.addListener(event -> {
-            if (event instanceof IngredientEvent.Discarded d) {
-                removed.add(d.ingredient().getId());
-            } else if (event instanceof IngredientEvent.ConsumedToZero c) {
-                removed.add(c.ingredient().getId());
+            if (event instanceof IngredientEvent.Discarded e) {
+                removed.add(e.ingredient().getId());
+            } else if (event instanceof IngredientEvent.ConsumedToZero e) {
+                removed.add(e.ingredient().getId());
             }
         });
         return removed;
@@ -92,18 +92,22 @@ class StateTrackerCleanupTest {
     }
 
     @Test
-    void overconsumeClampsToZeroAndFiresOnce() {
-        // useIngredient clamps `updated = max(0, current - used)`, so asking
-        // to use more than is available still lands at quantity=0 — and must
-        // fire the removal event exactly once.
+    void overconsumeThrowsAndFiresNoEvent() {
+        // useIngredient rejects a quantity that exceeds available inventory —
+        // no removal event should fire since the ingredient was not affected.
         List<String> removed = captureRemovals();
         Ingredient tomato = manager.addIngredient(
                 new Ingredient("t", "Tomato", 1.0, "kg", LocalDate.now().plusDays(2), 1.0)
         );
 
-        manager.useIngredient("t", tomato.getId(), 999.0);
+        try {
+            manager.useIngredient("t", tomato.getId(), 999.0);
+            assertFalse(true, "expected IllegalArgumentException for overconsume");
+        } catch (IllegalArgumentException expected) {
+            // correct
+        }
 
-        assertEquals(List.of(tomato.getId()), removed);
+        assertTrue(removed.isEmpty(), "no removal event should fire when use is rejected");
     }
 
     @Test
@@ -113,8 +117,8 @@ class StateTrackerCleanupTest {
         List<String> captured = new ArrayList<>();
         manager.addListener(event -> { throw new RuntimeException("first listener fails"); });
         manager.addListener(event -> {
-            if (event instanceof IngredientEvent.Discarded d) captured.add(d.ingredient().getId());
-            else if (event instanceof IngredientEvent.ConsumedToZero c) captured.add(c.ingredient().getId());
+            if (event instanceof IngredientEvent.Discarded e) captured.add(e.ingredient().getId());
+            else if (event instanceof IngredientEvent.ConsumedToZero e) captured.add(e.ingredient().getId());
         });
 
         Ingredient tomato = manager.addIngredient(
@@ -143,12 +147,12 @@ class StateTrackerCleanupTest {
         List<String> a = new ArrayList<>();
         List<String> b = new ArrayList<>();
         manager.addListener(event -> {
-            if (event instanceof IngredientEvent.Discarded d) a.add(d.ingredient().getId());
-            else if (event instanceof IngredientEvent.ConsumedToZero c) a.add(c.ingredient().getId());
+            if (event instanceof IngredientEvent.Discarded e) a.add(e.ingredient().getId());
+            else if (event instanceof IngredientEvent.ConsumedToZero e) a.add(e.ingredient().getId());
         });
         manager.addListener(event -> {
-            if (event instanceof IngredientEvent.Discarded d) b.add(d.ingredient().getId());
-            else if (event instanceof IngredientEvent.ConsumedToZero c) b.add(c.ingredient().getId());
+            if (event instanceof IngredientEvent.Discarded e) b.add(e.ingredient().getId());
+            else if (event instanceof IngredientEvent.ConsumedToZero e) b.add(e.ingredient().getId());
         });
 
         Ingredient tomato = manager.addIngredient(

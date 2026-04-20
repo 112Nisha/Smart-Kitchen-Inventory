@@ -92,6 +92,23 @@ public class InMemoryNotificationStore implements NotificationStore {
         return removed;
     }
 
+    @Override
+    public int pruneByIngredient(String tenantId, String ingredientId) {
+        int removed = 0;
+        synchronized (notifications) {
+            Iterator<NotificationMessage> it = notifications.iterator();
+            while (it.hasNext()) {
+                NotificationMessage m = it.next();
+                if (m.getTenantId().equals(tenantId) && m.getIngredientId().equals(ingredientId)) {
+                    it.remove();
+                    dedupKeys.remove(dedupKeyOf(m));
+                    removed++;
+                }
+            }
+        }
+        return removed;
+    }
+
     private String dedupKeyOf(NotificationMessage message) {
         // Date portion of createdAt: one "alert window" per (ingredient, role)
         // per calendar day. New day → fresh alert.

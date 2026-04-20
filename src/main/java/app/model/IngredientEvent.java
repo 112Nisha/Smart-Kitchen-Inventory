@@ -7,4 +7,6 @@ public sealed interface IngredientEvent {
     record Discarded(Ingredient ingredient) implements IngredientEvent {}
 
     record ConsumedToZero(Ingredient ingredient) implements IngredientEvent {}
+
+    record Updated(Ingredient ingredient) implements IngredientEvent {}
 }
