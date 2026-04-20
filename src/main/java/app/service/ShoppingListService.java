@@ -42,59 +42,85 @@ public class ShoppingListService implements InventoryChangeObserver {
 
     /**
      * Generate shopping list for a tenant.
-     * Returns cached result if available, otherwise computes and caches.
-     * Filters out items marked as PURCHASED or IGNORED.
+     * Returns only PENDING items (need to be ordered).
+     * Results are derived from the shared all-items cache.
      *
      * @param tenantId the tenant
      * @return list of items currently needing to be ordered
      */
     public List<ShoppingListItem> generateShoppingList(String tenantId) {
-        return cache.computeIfAbsent(tenantId, this::computeShoppingList);
+        return getAllItems(tenantId).stream()
+                .filter(item -> item.getStatus() == ShoppingItemStatus.PENDING)
+                .toList();
     }
 
     /**
-     * Internal computation of shopping list.
-     * 1. Get all ingredients for tenant
-     * 2. Filter: not discarded, quantity <= threshold
-     * 3. For each, look up status override from repository
-     * 4. Create ShoppingListItem with calculated reorder qty
-     * 5. Filter OUT items marked PURCHASED or IGNORED
+     * Return items that the user has explicitly ignored.
+     * These are below threshold but marked IGNORED — shown separately in the UI
+     * so the user can restore them to PENDING without losing the context of why
+     * they were dismissed.
+     *
+     * @param tenantId the tenant
+     * @return list of items currently marked as IGNORED
      */
-    private List<ShoppingListItem> computeShoppingList(String tenantId) {
+    public List<ShoppingListItem> getIgnoredItems(String tenantId) {
+        return getAllItems(tenantId).stream()
+                .filter(item -> item.getStatus() == ShoppingItemStatus.IGNORED)
+                .toList();
+    }
+
+    /**
+     * Shared cache accessor. Returns all low-stock items regardless of status.
+     * generateShoppingList and getIgnoredItems both filter from this list so that
+     * the underlying computation (and its DB calls) only happens once per cache
+     * entry.
+     */
+    private List<ShoppingListItem> getAllItems(String tenantId) {
+        return cache.computeIfAbsent(tenantId, this::computeAllItems);
+    }
+
+    /**
+     * Internal computation of all low-stock items for a tenant.
+     *
+     * For each ingredient:
+     *   - If quantity is above threshold: delete any stale PURCHASED or IGNORED
+     *     record so the item re-appears the next time it drops below threshold.
+     *   - If quantity is at or below threshold: include with its current status.
+     *
+     * listIngredients() already excludes discarded items, so no discard check
+     * is needed here.
+     */
+    private List<ShoppingListItem> computeAllItems(String tenantId) {
         List<ShoppingListItem> items = new ArrayList<>();
 
         for (Ingredient ingredient : inventoryManager.listIngredients(tenantId)) {
-            // Only consider non-discarded ingredients below threshold
-            if (ingredient.isDiscarded() || ingredient.getQuantity() > ingredient.getLowStockThreshold()) {
+            if (ingredient.getQuantity() > ingredient.getLowStockThreshold()) {
+                // Ingredient is back above threshold — clean up any stale override
+                // so it reappears on the list the next time it drops below threshold.
+                shoppingListRepository.deleteStatus(tenantId, ingredient.getId());
                 continue;
             }
 
             // Look up any persisted status override (PURCHASED, IGNORED)
             ShoppingItemStatus status = shoppingListRepository
-                .findStatus(tenantId, ingredient.getId())
-                .orElse(ShoppingItemStatus.PENDING);
+                    .findStatus(tenantId, ingredient.getId())
+                    .orElse(ShoppingItemStatus.PENDING);
 
-            // Calculate suggested reorder quantity: (threshold × 2) - current quantity
+            // Suggested reorder quantity: bring stock up to twice the threshold
             double suggestedReorderQty = (ingredient.getLowStockThreshold() * 2) - ingredient.getQuantity();
 
-            ShoppingListItem item = new ShoppingListItem(
-                ingredient.getId(),
-                ingredient.getName(),
-                ingredient.getQuantity(),
-                ingredient.getLowStockThreshold(),
-                suggestedReorderQty,
-                ingredient.getUnit(),
-                status
-            );
-
-            items.add(item);
+            items.add(new ShoppingListItem(
+                    ingredient.getId(),
+                    ingredient.getName(),
+                    ingredient.getQuantity(),
+                    ingredient.getLowStockThreshold(),
+                    suggestedReorderQty,
+                    ingredient.getUnit(),
+                    status
+            ));
         }
 
-        // Filter out items that are PURCHASED or IGNORED
-        // Only return items that are PENDING (need to be ordered)
-        return items.stream()
-            .filter(item -> item.getStatus() == ShoppingItemStatus.PENDING)
-            .toList();
+        return items;
     }
 
     /**
@@ -104,6 +130,26 @@ public class ShoppingListService implements InventoryChangeObserver {
      */
     public void markPurchased(String tenantId, String ingredientId) {
         shoppingListRepository.saveStatus(tenantId, ingredientId, ShoppingItemStatus.PURCHASED);
+        cache.remove(tenantId);
+    }
+
+    /**
+     * Mark multiple ingredients as purchased in one operation.
+     * Each status write is individual; a single cache eviction follows all writes
+     * so callers only pay one recompute cost regardless of selection size.
+     *
+     * A repository-level batch (prepared-statement addBatch) is intentionally
+     * not added here: shopping list sizes are bounded by the number of low-stock
+     * ingredients (typically small), so the overhead of N individual INSERTs is
+     * negligible and the added interface complexity is not justified yet.
+     *
+     * @param tenantId      the tenant
+     * @param ingredientIds the ingredients to mark as purchased
+     */
+    public void markPurchasedBulk(String tenantId, List<String> ingredientIds) {
+        for (String ingredientId : ingredientIds) {
+            shoppingListRepository.saveStatus(tenantId, ingredientId, ShoppingItemStatus.PURCHASED);
+        }
         cache.remove(tenantId);
     }
 
