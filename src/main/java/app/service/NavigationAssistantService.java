@@ -65,7 +65,9 @@ public class NavigationAssistantService {
     private static final List<ShortcutRule> SHORTCUT_RULES = List.of(
             new ShortcutRule("/dashboard", "dashboard", "Dashboard"),
             new ShortcutRule("/inventory", "inventory", "Inventory"),
-            new ShortcutRule("/expiry-alerts", "expiry alerts", "Expiry Alerts"),
+            new ShortcutRule("/notifications", "expiry alerts", "Expiry Alerts"),
+            new ShortcutRule("/notifications", "notifications", "Notifications"),
+            new ShortcutRule("/notifications", "/expiry-alerts", "Expiry Alerts"),
             new ShortcutRule("/shopping-list", "shopping list", "Shopping List"),
             new ShortcutRule("/recommendations", "recommendations", "Dish Suggestions"),
             new ShortcutRule("/recipes/add", "add recipe", "Add Recipe"),
@@ -74,7 +76,7 @@ public class NavigationAssistantService {
     private static final Set<String> ALLOWED_ACTION_ROUTES = Set.of(
             "/dashboard",
             "/inventory",
-            "/expiry-alerts",
+            "/notifications",
             "/shopping-list",
             "/recommendations",
             "/recipes/add",
@@ -210,7 +212,7 @@ public class NavigationAssistantService {
             + "- actions: 0 to 4 one-click actions.\\n"
                 + "- quickTips: 0 to 3 optional tips.\\n"
             + "- Every action URL must be an in-app relative path that starts with /.\\n"
-            + "- Allowed action URLs only: /dashboard, /inventory, /expiry-alerts, /shopping-list, /recommendations, /recipes/add, /recipes/manage.\\n"
+            + "- Allowed action URLs only: /dashboard, /inventory, /notifications, /shopping-list, /recommendations, /recipes/add, /recipes/manage.\\n"
             + "- Every action URL should include ?tenant=" + tenantId + "\\n"
                 + "- Do not output markdown fences.\\n"
             + "Tenant: " + tenantId + "\\n"
@@ -579,6 +581,7 @@ public class NavigationAssistantService {
         String normalized = path.trim().toLowerCase(Locale.ROOT);
 
         return switch (normalized) {
+            case "/expiry-alerts" -> "/notifications";
             case "/add-recipe", "/recipes/new", "/new-recipe", "/add-dish", "/new-dish" -> "/recipes/add";
             case "/manage-recipes", "/recipes/list", "/recipe-management" -> "/recipes/manage";
             case "/dish-recommendations", "/dish-suggestions" -> "/recommendations";
