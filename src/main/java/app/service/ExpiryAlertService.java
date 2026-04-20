@@ -1,8 +1,7 @@
 package app.service;
 
 import app.model.ExpiryAlertContext;
-import app.service.IngredientStateTracker;
-import app.service.StakeholderNotificationHandler;
+import app.model.IngredientEvent;
 import app.model.Ingredient;
 
 import java.time.LocalDate;
@@ -12,7 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ExpiryAlertService {
+public class ExpiryAlertService implements IngredientEventListener {
     private static final double MIN_ALERTABLE_QUANTITY = 1e-9;
 
     private final InventoryManager inventoryManager;
@@ -33,6 +32,25 @@ public class ExpiryAlertService {
     public void attachLifecycleListeners() {
         if (inventoryManager != null) {
             inventoryManager.addListener(new TrackerCleanupListener(stateTracker));
+        }
+    }
+
+    @Override
+    public void onEvent(IngredientEvent event) {
+        Ingredient ingredient = null;
+        if (event instanceof IngredientEvent.Used e) {
+            ingredient = e.ingredient();
+        } else if (event instanceof IngredientEvent.Updated e) {
+            ingredient = e.ingredient();
+        }
+        if (ingredient != null && ingredient.getQuantity() > MIN_ALERTABLE_QUANTITY) {
+            long days = ChronoUnit.DAYS.between(LocalDate.now(), ingredient.getExpiryDate());
+            ExpiryAlertContext context = new ExpiryAlertContext(ingredient, days);
+            boolean transitioned = stateTracker.recordAndCheckTransition(
+                    ingredient.getId(), ingredient.getLifecycle());
+            if (transitioned) {
+                dispatch(context);
+            }
         }
     }
 

@@ -165,6 +165,6 @@ public class SqliteNotificationStore implements NotificationStore {
     // format without touching in-memory behaviour.
     private String buildDedupKey(NotificationMessage message) {
         LocalDate day = message.getCreatedAt().toLocalDate();
-        return message.getTenantId() + "|" + message.getIngredientId() + "|" + message.getRecipientRole() + "|" + day;
+        return message.getTenantId() + "|" + message.getIngredientId() + "|" + message.getRecipientRole() + "|" + message.getSubject() + "|" + day;
     }
 }

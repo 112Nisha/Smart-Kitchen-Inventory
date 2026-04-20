@@ -13,8 +13,6 @@ public class NotificationService {
     private final long backoffBaseMillis;
 
     public NotificationService(int maxRetries) {
-        // Default base delay keeps unit tests fast (10ms * 2^n) while still
-        // demonstrating back-off behaviour in end-to-end runs.
         this(maxRetries, 10L);
     }
 
@@ -23,7 +21,6 @@ public class NotificationService {
             throw new IllegalArgumentException("maxRetries must be >= 1");
         }
         if (backoffBaseMillis < 0) {
-            // Negative delays are nonsensical; reject at construction time.
             throw new IllegalArgumentException("backoffBaseMillis must be >= 0");
         }
         this.maxRetries = maxRetries;

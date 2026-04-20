@@ -4,6 +4,7 @@ import app.service.ExpiryAlertScheduler;
 import app.service.StakeholderNotificationHandler;
 import app.config.AlertConfigService;
 import app.model.Ingredient;
+import app.alerts.InventoryChangeObserver;
 import app.service.DashboardNotificationStrategy;
 import app.service.EmailNotificationStrategy;
 import app.service.LowStockAlertService;
@@ -70,6 +71,7 @@ public class AppContextListener implements ServletContextListener {
 
         ExpiryAlertService expiryAlertService = new ExpiryAlertService(inventoryManager, stakeholderNotify);
         expiryAlertService.attachLifecycleListeners();
+        inventoryManager.addListener(expiryAlertService);
         inventoryManager.addListener(new RoleNotificationListener(notificationService));
         inventoryManager.addListener(new StaleNotificationPruner(notificationStore));
 

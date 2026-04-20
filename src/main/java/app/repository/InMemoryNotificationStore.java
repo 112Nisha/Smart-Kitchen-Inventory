@@ -110,9 +110,7 @@ public class InMemoryNotificationStore implements NotificationStore {
     }
 
     private String dedupKeyOf(NotificationMessage message) {
-        // Date portion of createdAt: one "alert window" per (ingredient, role)
-        // per calendar day. New day → fresh alert.
         LocalDate day = message.getCreatedAt().toLocalDate();
-        return message.getTenantId() + "|" + message.getIngredientId() + "|" + message.getRecipientRole() + "|" + day;
+        return message.getTenantId() + "|" + message.getIngredientId() + "|" + message.getRecipientRole() + "|" + message.getSubject() + "|" + day;
     }
 }

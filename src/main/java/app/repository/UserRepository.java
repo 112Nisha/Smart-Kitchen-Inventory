@@ -158,7 +158,7 @@ public class UserRepository {
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, restaurantName);
-            stmt.setString(2, role.toLowerCase());
+            stmt.setString(2, role == null ? null : role.toLowerCase());
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {

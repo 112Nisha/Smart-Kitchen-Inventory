@@ -22,16 +22,20 @@ public class RoleNotificationListener implements IngredientEventListener {
     }
 
     private void handleUsed(Ingredient ingredient, double quantityUsed) {
+        double threshold = ingredient.getLowStockThreshold();
+        if (threshold > 0 && ingredient.getQuantity() <= threshold) {
+            // LowStockAlertService will fire a more specific alert for this event
+            return;
+        }
+
         String name = ingredient.getName();
         double remaining = ingredient.getQuantity();
 
-        // Chef: actionable detail — what was used and what's left
         send(ingredient, "CHEF",
                 "Ingredient used: " + name,
                 String.format("%.2f %s used. %.2f %s remaining.",
                         quantityUsed, ingredient.getUnit(), remaining, ingredient.getUnit()));
 
-        // Manager: operational summary — stock visibility
         send(ingredient, "MANAGER",
                 "Stock update: " + name,
                 String.format("%.2f %s consumed. Current stock: %.2f %s.",
