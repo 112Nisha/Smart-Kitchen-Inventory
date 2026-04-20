@@ -34,6 +34,7 @@ import javax.servlet.annotation.WebListener;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @WebListener
@@ -129,8 +130,11 @@ public class AppContextListener implements ServletContextListener {
         // Run an immediate sweep so dashboard notifications are populated at
         // boot without waiting for the first 24h scheduler tick.
         try {
-            expiryAlertService.evaluateAllTenants();
+            Map<String, java.util.List<app.model.ExpiryAlertContext>> expiryResults = expiryAlertService.evaluateAllTenants();
+            expiryResults.forEach((tenant, alerts) ->
+                System.out.printf("[AppContextListener] startup expiry sweep: tenant=%s alerts=%d%n", tenant, alerts.size()));
             lowStockAlertService.evaluateAllTenants();
+            System.out.println("[AppContextListener] startup sweep complete");
         } catch (RuntimeException ex) {
             System.err.println("[AppContextListener] startup sweep failed: " + ex.getMessage());
         }

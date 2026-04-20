@@ -105,7 +105,9 @@ public final class InventoryManager {
         ingredient.setQuantity(roundToTwoDecimals(ingredient.getQuantity()));
         ingredient.setLowStockThreshold(roundToTwoDecimals(ingredient.getLowStockThreshold()));
         Ingredient saved = ingredientRepository.save(ingredient);
+        saved.refreshState(LocalDate.now(), nearExpiryDays.getAsInt());
         invalidateTenantCache(ingredient.getTenantId());
+        fireEvent(new IngredientEvent.Updated(saved));
         notifyInventoryObservers(ingredient.getTenantId());
         return saved;
     }
