@@ -144,6 +144,35 @@ public class UserRepository {
         }
     }
 
+    /** finds the username for a given restaurant and role */
+    public Optional<String> findUsernameByRestaurantAndRole(String restaurantName, String role) {
+        String sql = """
+                    SELECT u.username
+                    FROM users u
+                    JOIN restaurants r ON u.restaurant_id = r.id
+                    WHERE r.name = ? AND u.role = ?
+                    LIMIT 1
+                """;
+
+        try (Connection conn = DriverManager.getConnection(DatabaseInitializer.getUrl());
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, restaurantName);
+            stmt.setString(2, role.toLowerCase());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(rs.getString("username"));
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to find username", e);
+        }
+
+        return Optional.empty();
+    }
+
     /** checks if a restaurant already exists */
     public boolean restaurantExists(String restaurantName) {
         String sql = "SELECT 1 FROM restaurants WHERE name = ?";

@@ -17,6 +17,7 @@ import app.repository.IngredientRepository;
 import app.repository.ShoppingListRepository;
 import app.repository.SqliteIngredientRepository;
 import app.repository.SqliteShoppingListRepository;
+import app.repository.UserRepository;
 import app.service.DishRecommendationService;
 import app.service.ExpiryAlertService;
 import app.service.InventoryManager;
@@ -63,7 +64,7 @@ public class AppContextListener implements ServletContextListener {
         NotificationStore notificationStore = new SqliteNotificationStore();
         NotificationService notificationService = new NotificationService(3);
         notificationService.registerStrategy(new DashboardNotificationStrategy(notificationStore));
-        notificationService.registerStrategy(new EmailNotificationStrategy("localhost", 25, "noreply@kitchen.local"));
+        notificationService.registerStrategy(new EmailNotificationStrategy("localhost", 25, new UserRepository()));
 
         StakeholderNotificationHandler stakeholderNotify = new StakeholderNotificationHandler(notificationService);
 

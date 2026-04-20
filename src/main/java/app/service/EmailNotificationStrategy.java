@@ -1,37 +1,32 @@
 package app.service;
 
 import app.model.NotificationMessage;
+import app.repository.UserRepository;
 
 import java.util.Objects;
 
 public class EmailNotificationStrategy implements NotificationStrategy {
     private final String smtpHost;
     private final int smtpPort;
-    private final String fromAddress;
+    private final UserRepository userRepository;
 
-    public EmailNotificationStrategy(String smtpHost, int smtpPort, String fromAddress) {
+    public EmailNotificationStrategy(String smtpHost, int smtpPort, UserRepository userRepository) {
         this.smtpHost = Objects.requireNonNull(smtpHost, "smtpHost is required");
         this.smtpPort = smtpPort;
-        this.fromAddress = Objects.requireNonNull(fromAddress, "fromAddress is required");
+        this.userRepository = Objects.requireNonNull(userRepository, "userRepository is required");
     }
 
     @Override
     public void send(NotificationMessage message) {
-        // Resolve recipient email from role. Extend this lookup
-        // (e.g. a DB-backed role→email map) as tenants are onboarded.
-        String toAddress = resolveRecipientEmail(message.getTenantId(), message.getRecipientRole());
-        sendEmail(toAddress, message.getSubject(), message.getBody());
+        String tenantId = message.getTenantId();
+        String from = "alert@" + tenantId;
+        String to = userRepository.findUsernameByRestaurantAndRole(tenantId, message.getRecipientRole())
+                .orElse(tenantId + "-" + message.getRecipientRole().toLowerCase());
+        sendEmail(from, to, message.getSubject(), message.getBody());
     }
 
-    private void sendEmail(String to, String subject, String body) {
-        // JavaMail (jakarta.mail) integration point. Keeping this as a stub
-        // until SMTP credentials are configured in the deployment environment.
+    private void sendEmail(String from, String to, String subject, String body) {
         System.out.printf("[EmailNotificationStrategy] SMTP %s:%d | From: %s | To: %s | Subject: %s%n",
-                smtpHost, smtpPort, fromAddress, to, subject);
-    }
-
-    private String resolveRecipientEmail(String tenantId, String role) {
-        // Default fallback — replace with a proper tenant/role → email lookup.
-        return tenantId + "-" + role.toLowerCase() + "@kitchen.local";
+                smtpHost, smtpPort, from, to, subject);
     }
 }
