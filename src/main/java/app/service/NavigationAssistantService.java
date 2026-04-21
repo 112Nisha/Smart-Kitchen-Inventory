@@ -62,6 +62,8 @@ public class NavigationAssistantService {
             "\\\"shortAnswer\\\"\\s*:\\s*\\\"((?:\\\\.|[^\\\\\"])*)\\\"",
             Pattern.CASE_INSENSITIVE
     );
+    private static final Pattern EXPIRY_SHORTCUT_PATTERN = Pattern.compile("\\bexpiry(?:\\s+alerts?)?\\b",
+            Pattern.CASE_INSENSITIVE);
     private static final List<ShortcutRule> SHORTCUT_RULES = List.of(
             new ShortcutRule("/dashboard", "dashboard", "Dashboard"),
             new ShortcutRule("/inventory", "inventory", "Inventory"),
@@ -386,6 +388,15 @@ public class NavigationAssistantService {
     }
 
     private AssistantReply tryShortcutReply(String tenantId, String userMessage) {
+        if (userMessage != null && EXPIRY_SHORTCUT_PATTERN.matcher(userMessage).find()) {
+            return new AssistantReply(
+                    "Use the Expiry Alerts page for this.",
+                    List.of("Open Expiry Alerts using the action below."),
+                    List.of(new QuickAction("Open Expiry Alerts", "/notifications?tenant=" + urlEncode(tenantId))),
+                    List.of()
+            );
+        }
+
         String normalized = normalizeShortcutQuery(userMessage);
         if (normalized.isBlank()) {
             return null;
