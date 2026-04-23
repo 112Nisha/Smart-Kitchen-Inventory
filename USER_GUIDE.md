@@ -43,10 +43,9 @@ Smart Kitchen Inventory helps restaurant teams:
 - Shows suggested reorder quantity.
 
 ## 5. Sustainability Message
-When you log a suggested dish as cooked, the system estimates:
-- Food saved from landfill (kg)
-- Methane emissions avoided (kg)
-- CO2e avoided (kg)
+When you log a suggested dish as cooked, the system shows:
+- Food saved from landfill (kg and ltr)
+- Number of expiring ingredients saved
 
 ## 6. Good Operating Practice
 - Update quantities immediately after receiving or using ingredients.
