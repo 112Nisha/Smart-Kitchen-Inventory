@@ -191,4 +191,3 @@ Current unit tests validate:
 
 ## 8. Notes
 - Notifications are stored in-memory for prototype visibility.
-- Sustainability impact uses simple configurable coefficients in `WasteImpactService`.
