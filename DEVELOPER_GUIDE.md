@@ -1,193 +1,212 @@
 # Developer Guide - Smart Kitchen Inventory
 
 ## 1. Stack
-- Java 17
-- Jakarta Servlet 6 / JSP / JSTL
-- Maven WAR packaging
-- Apache Tomcat 10+
-- In-memory repositories for prototype (DB-ready architecture)
 
-## 2. Build and Run
+- Java 17
+- Java Servlets, JSP, JSTL
+- Maven WAR packaging
+- SQLite via `sqlite-jdbc`
+- Gson
+- JavaMail
+- JUnit 5
+
+## 2. Repository Layout
+
+- `src/main/java/app/config`: SQLite initialization and alert configuration
+- `src/main/java/app/model`: domain models and records
+- `src/main/java/app/repository`: SQLite-backed repositories and stores
+- `src/main/java/app/service`: business services and coordination logic
+- `src/main/java/app/state`: ingredient lifecycle state behavior
+- `src/main/java/app/web`: servlets, bootstrapping, and app wiring
+- `src/main/webapp/WEB-INF/views`: JSP views
+- `src/main/webapp/assets`: CSS and static assets
+- `src/test/java/app`: unit, integration, and performance-oriented tests
+- `ADRs`: architectural decision records
+
+## 3. Runtime Architecture
+
+The application is packaged as a single WAR and wired in-process through [`AppContextListener`](./src/main/java/app/web/AppContextListener.java).
+
+Key runtime components:
+
+- `InventoryManager`: singleton coordination point for inventory operations
+- `SqliteIngredientRepository`: persisted ingredient storage
+- `SqliteNotificationStore`: persisted notifications with deduplication
+- `SqliteShoppingListRepository`: persisted shopping-list state
+- `DishRecommendationService`: recommendation and cooked-dish flow
+- `ExpiryAlertService` and `LowStockAlertService`: alert generation
+- `ExpiryAlertScheduler`: background periodic sweep
+- `NavigationAssistantService`: optional assistant-backed navigation help
+
+## 4. Introduction to Codebase
+
+If you are new to the codebase, start with these classes in this order:
+
+- [`AppContextListener`](./src/main/java/app/web/AppContextListener.java): application bootstrap. Creates repositories, services, listeners, notification strategies, and the background scheduler.
+- [`AppServices`](./src/main/java/app/web/AppServices.java): shared container that exposes the initialized services to the servlet layer.
+- [`BaseServlet`](./src/main/java/app/web/BaseServlet.java): common servlet helpers for session handling, tenant lookup, redirects, and role checks.
+- [`InventoryManager`](./src/main/java/app/service/InventoryManager.java): the core coordination class for ingredient operations. Most inventory-related behavior flows through this singleton.
+- Repository classes in [`src/main/java/app/repository`](./src/main/java/app/repository): persistence boundaries for ingredients, notifications, shopping-list state, and users.
+- Service classes in [`src/main/java/app/service`](./src/main/java/app/service): business logic for recommendations, alerts, notifications, shopping-list generation, lifecycle tracking, and waste impact.
+- Servlet classes in [`src/main/java/app/web`](./src/main/java/app/web): route handlers that translate HTTP requests into service calls and JSP rendering.
+- JSP views in [`src/main/webapp/WEB-INF/views`](./src/main/webapp/WEB-INF/views): page templates for dashboard, inventory, auth, recommendations, notifications, recipes, and shopping list.
+
+## 5. High-Level Responsibilities
+
+These are the main classes a developer will encounter first:
+
+- [`AppContextListener`](./src/main/java/app/web/AppContextListener.java): wires the whole application together at startup and starts the scheduled alert sweep.
+- [`AppServices`](./src/main/java/app/web/AppServices.java): gives servlets access to the already-wired service layer.
+- [`InventoryManager`](./src/main/java/app/service/InventoryManager.java): central inventory API for add/update/use/discard/list operations and tenant-scoped caching.
+- [`ExpiryAlertService`](./src/main/java/app/service/ExpiryAlertService.java): evaluates ingredient expiry state and creates alert contexts.
+- [`LowStockAlertService`](./src/main/java/app/service/LowStockAlertService.java): evaluates low-stock conditions and triggers notifications.
+- [`ShoppingListService`](./src/main/java/app/service/ShoppingListService.java): builds and updates shopping-list entries from inventory thresholds.
+- [`DishRecommendationService`](./src/main/java/app/service/DishRecommendationService.java): suggests dishes from near-expiry ingredients and handles the "log as cooked" workflow.
+- [`NotificationService`](./src/main/java/app/service/NotificationService.java): dispatches notifications through registered strategies with retry/fault-tolerance behavior.
+- [`SqliteIngredientRepository`](./src/main/java/app/repository/SqliteIngredientRepository.java): persists ingredient state in SQLite.
+- [`SqliteNotificationStore`](./src/main/java/app/repository/SqliteNotificationStore.java): persists notifications with deduplication and retention support.
+- [`UserRepository`](./src/main/java/app/repository/UserRepository.java): handles registration, login, and restaurant-user lookup.
+
+## 6. Request and Data Flow
+
+The normal synchronous request path is:
+
+`browser -> servlet -> service -> repository/store -> SQLite -> servlet -> JSP response`
+
+Typical examples:
+
+- Inventory update:
+  `InventoryServlet -> InventoryManager -> SqliteIngredientRepository`
+- Dish recommendation page:
+  `DishRecommendationServlet -> DishRecommendationService -> InventoryManager / DishRepository`
+- Notifications page:
+  `NotificationsServlet -> NotificationStore + AlertConfigService`
+
+There is also background and event-driven behavior:
+
+- `AppContextListener` starts `ExpiryAlertScheduler`
+- the scheduler periodically triggers expiry and low-stock evaluation
+- inventory changes notify listeners/observers
+- listeners update notifications and shopping-list state
+
+## 7. Persistence Model
+
+The prototype is not in-memory anymore. It persists data in SQLite under `data/data.db`.
+
+Initialized tables include:
+
+- `restaurants`
+- `users`
+- `dish_recipes`
+- `recipe_ingredients`
+- `inventory_ingredients`
+- `notifications`
+- `shopping_list_items`
+- `app_config`
+
+Database setup is handled automatically by [`DatabaseInitializer`](./src/main/java/app/config/DatabaseInitializer.java).
+
+## 8. Authentication and Roles
+
+- Users register against a restaurant name
+- The first user for a new restaurant must be a `manager`
+- Supported roles are `manager` and `chef`
+- Login stores `tenant`, `username`, and `role` in the session
+- Chefs are redirected to `/recommendations`
+- Managers are redirected to `/dashboard`
+
+## 9. Build and Run
+
 ### Build
+
 ```bash
 mvn clean package
 ```
 
-Set the assistant API key before running from terminal:
+WAR output:
+
+```text
+target/smart-kitchen-inventory.war
+```
+
+### Local Run with Maven
+
+```bash
+mvn tomcat7:run
+```
+
+Open:
+
+```text
+http://localhost:8080/smart-kitchen-inventory
+```
+
+### Environment Variables
+
+Optional navigation assistant support:
+
 ```bash
 export GEMINI_API_KEY="your_gemini_api_key"
 ```
 
-WAR output:
-- `target/smart-kitchen-inventory.war`
+Optional email notifications:
 
-### Run on Tomcat
-1. Deploy WAR to Tomcat `webapps/`.
-2. Start Tomcat.
-3. Open `http://localhost:8080/smart-kitchen-inventory`.
+```bash
+export GMAIL_FROM="your-address@gmail.com"
+export GMAIL_APP_PASSWORD="your-app-password"
+```
 
-## 3. Project Structure
-- `src/main/java/app/model`: Domain objects and enums
-- `src/main/java/app/state`: Ingredient lifecycle states
-- `src/main/java/app/alerts`: Alert chain and observer flow
-- `src/main/java/app/notification`: Notification strategy + store
-- `src/main/java/app/repository`: Data access layer
-- `src/main/java/app/service`: Business services
-- `src/main/java/app/web`: Servlets and app bootstrap
-- `src/test/java/app`: Unit tests
-- `src/main/webapp/WEB-INF/views`: JSP pages
+If Gmail variables are absent, the app still runs with dashboard-stored notifications only.
 
-## 4. Pattern Mapping
+## 10. Important Routes
+
+- `/login`
+- `/register`
+- `/dashboard`
+- `/inventory`
+- `/notifications`
+- `/recommendations`
+- `/shopping-list`
+- `/assistant/navigation`
+
+## 11. Pattern Mapping
+
 - Singleton: `InventoryManager`
-- Observer: `AlertEventBus`, `ChefObserver`, `ManagerObserver`
-- Chain of Responsibility:
-  - `ExpiryCheckHandler`
-  - `UrgencyFlagHandler`
-  - `ChefNotificationHandler`
-  - `ManagerNotificationHandler`
-- State Pattern:
-  - `FreshState`, `NearExpiryState`, `ExpiredState`, `DiscardedState`
-- Strategy Pattern:
-  - `NotificationStrategy`, `EmailNotificationStrategy`
+- State Pattern: `FreshState`, `NearExpiryState`, `ExpiredState`, `DiscardedState`
+- Strategy Pattern: `NotificationStrategy`, `EmailNotificationStrategy`, `DashboardNotificationStrategy`
+- Observer/Event-driven flow: inventory listeners, role notification listener, shopping-list observer
+- Repository Pattern: ingredient, notification, shopping-list, and user persistence boundaries
 
-## 5. Architectural Tactics Coverage
-- Modularity: clear package separation by concern.
-- Caching: tenant-based inventory cache in `InventoryManager`.
-- Fault tolerance: notification retry loop in `NotificationService`.
-- Scalability: tenant partitioning via `tenantId` on every ingredient.
-- Data validation: guarded input checks before persistence and updates.
+## 12. Architectural Tactics Coverage
 
-## 6. Extending to MySQL/PostgreSQL
-1. Replace `IngredientRepository` implementation with JDBC/JPA-backed repository.
-2. Keep service interfaces unchanged.
-3. Add migration scripts for ingredient and alert tables.
-4. Move seeded data into SQL seed scripts.
+- Modularity: packages split by config, repository, service, web, and state concerns
+- Caching: tenant-scoped caching inside `InventoryManager`
+- Fault tolerance: notification retries and graceful fallback when optional integrations are missing
+- Scalability: tenant-based isolation and repository abstractions
+- Data validation: servlet and service-level input checks before persistence
 
-## 7. Test Commands
+## 13. Testing
+
+Main suite:
+
 ```bash
 mvn test
 ```
 
-Caching NFR validation:
+Selected performance/caching commands:
+
 ```bash
 mvn -Dtest=InventoryManagerCachingTest,InventoryManagerCachePerformanceTest test
-```
-
-Main dashboard performance threshold test (< 2s with warmed cache):
-```bash
 mvn -Dtest=DashboardLoadPerformanceTest test
 ```
 
-Benchmark formulas for report:
-- `latency_improvement_percent = ((miss_mean_ms - hit_mean_ms) / miss_mean_ms) * 100`
-- `db_read_reduction_percent = ((miss_reads_per_request - hit_reads_per_request) / miss_reads_per_request) * 100`
+The Maven Surefire configuration excludes some performance-heavy tests from the default run. See [`pom.xml`](./pom.xml) for current exclusions.
 
+## 14. Notes for Submission / Demo
 
-# Cache and Performance Test Summary
-
-## 1. InventoryManagerCachingTest
-
-This test verifies that the ingredient cache inside `InventoryManager` behaves correctly during normal operations.
-
-It checks that repeated calls to `listIngredients()` for the same tenant use cached data instead of repeatedly querying the repository. It also verifies that cache entries are invalidated whenever ingredient data changes through operations such as adding, updating, using, or discarding ingredients. In addition, it confirms that cache entries remain isolated between tenants so one tenant’s updates do not affect another tenant’s cached data.
-
-### Output
-
-This test does not print benchmark values. It returns assertion success or failure.
-
-Typical output:
-
-- Pass if repository call counts match expected values
-- Fail if cache is not reused or invalidated correctly
-
-Example assertions checked:
-
-- repeated reads → repository called once  
-- after update → repository called again  
-- tenant isolation → counts remain separate
-
-### Execution report (2026-04-19)
-
-- Result: `PASS` (`Tests run: 6, Failures: 0, Errors: 0, Skipped: 0`)
-- Command used: `mvn -Dtest=InventoryManagerCachingTest test`
-- Evidence file: `target/surefire-reports/app.InventoryManagerCachingTest.txt`
-
-
-## 2. InventoryManagerCachePerformanceTest
-
-This test measures whether caching improves retrieval speed in `InventoryManager`.
-
-A delayed repository is used to simulate slow database access. Two scenarios are measured:
-
-- **Cache miss path:** cache reset before every request, forcing repository access
-- **Cache hit path:** cache warmed once, then reused repeatedly
-
-The test collects latency statistics across many iterations and compares both paths.
-
-### Output
-
-This test prints benchmark statistics to console.
-
-Typical output:
-
-```text
-Caching benchmark (InventoryManager, tenant=tenant-cache-perf)
-Cache miss: mean=4.2 ms, median=4.1 ms, p95=4.5 ms, reads/request=1.000
-Cache hit:  mean=0.1 ms, median=0.1 ms, p95=0.2 ms, reads/request=0.000
-Latency improvement: 97.6%
-Repository read reduction: 100.0%
-```
-
-### Execution report (2026-04-19)
-
-- Result: `PASS` (`Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`)
-- Command used: `mvn -Dtest=InventoryManagerCachePerformanceTest test`
-- Captured metrics:
-  - Cache miss: mean=`4.532 ms`, median=`4.474 ms`, p95=`4.793 ms`, reads/request=`1.000`
-  - Cache hit: mean=`0.019 ms`, median=`0.019 ms`, p95=`0.026 ms`, reads/request=`0.000`
-  - Latency improvement: `99.59%`
-  - Repository read reduction: `100.00%`
-- Evidence file: `target/surefire-reports/app.InventoryManagerCachePerformanceTest.txt`
-
-## 3.  DashboardLoadPerformanceTest
-
-This test verifies that dashboard loading remains fast when ingredient data is already available in cache.
-
-A delayed repository is used to simulate slow database access by adding artificial delay to every `findByTenant()` call. A large dataset of ingredients and notifications is inserted first. Before measuring dashboard load time, the ingredient cache is warmed using `manager.listIngredients(tenant)` so that dashboard rendering should reuse cached data instead of querying the repository again.
-
-A proxy-based mock request and response are created to execute `DashboardServlet` without a real servlet container. The servlet is then timed while processing a dashboard request.
-
-## What it checks
-
-- Dashboard response completes in under 2 seconds  
-- No additional repository read occurs during dashboard load  
-- Request is forwarded to the dashboard JSP  
-- Correct dashboard attributes are set
-
-## Output
-
-This test does not print benchmark values by default. It returns assertion success or failure.
-
-Typical assertions checked:
-
-- elapsed time < 2000 ms  
-- repository read count unchanged after dashboard execution  
-- forwarded path = `/WEB-INF/views/dashboard.jsp`  
-- `ingredientCount = 600`  
-- `notificationCount = 300`
-
-### Execution report (2026-04-19)
-
-- Result: `PASS` (`Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`)
-- Command used: `mvn -Dtest=DashboardLoadPerformanceTest test`
-- Confirmed checks:
-  - Dashboard request remained under `2s` with warmed cache.
-- Evidence file: `target/surefire-reports/app.DashboardLoadPerformanceTest.txt`
-
-Current unit tests validate:
-- State transitions
-- Shopping list logic
-- Expiry alert escalation to manager
-
-## 8. Notes
-- Notifications are stored in-memory for prototype visibility.
+- The app auto-initializes its SQLite database on startup
+- Sample restaurant and inventory data are seeded for prototype exploration
+- User accounts are created through the registration flow
+- Notification history survives restarts because it is stored in SQLite
+- The shopping list supports CSV export
+- The navigation assistant depends on `GEMINI_API_KEY`; without it, that feature is not usable
